@@ -1,0 +1,30 @@
+import { defineSchema, defineTable } from 'convex/server'
+import { v } from 'convex/values'
+
+export default defineSchema({
+	clerkUser: defineTable({
+		clerkId: v.string(),
+		avatarUrl: v.optional(v.string()),
+		emailAddress: v.array(v.string()),
+		firstName: v.optional(v.string()),
+		lastName: v.optional(v.string())
+	}).index('byClerkId', ['clerkId']),
+	clerkOrg: defineTable({
+		clerkId: v.string(),
+		avatarUrl: v.optional(v.string()),
+		name: v.string(),
+		slug: v.string(),
+		members: v.array(
+			v.object({
+				clerkId: v.string(),
+				role: v.union(v.literal('org:admin'), v.literal('org:member'))
+			})
+		)
+	}).index('byClerkId', ['clerkId']),
+	form: defineTable({
+		// Organization or User if personal account
+		businessId: v.string(),
+		title: v.string(),
+		description: v.optional(v.string())
+	}).index('byBusinessId', ['businessId'])
+})
