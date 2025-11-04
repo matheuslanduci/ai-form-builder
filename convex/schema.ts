@@ -39,5 +39,24 @@ export default defineSchema({
 			v.literal('archived')
 		),
 		tags: v.array(v.id('tag'))
-	}).index('byBusinessId', ['businessId'])
+	}).index('byBusinessId', ['businessId']),
+	formField: defineTable({
+		formId: v.id('form'),
+		pageId: v.optional(v.string()), // For future multi-page support
+		type: v.union(
+			v.literal('singleline'),
+			v.literal('multiline'),
+			v.literal('number'),
+			v.literal('select'),
+			v.literal('checkbox'),
+			v.literal('date')
+		),
+		title: v.string(),
+		placeholder: v.optional(v.string()),
+		required: v.boolean(),
+		order: v.number(), // For ordering fields within a page
+		options: v.optional(v.array(v.string())) // For select and checkbox fields
+	})
+		.index('byFormId', ['formId'])
+		.index('byFormIdAndPageId', ['formId', 'pageId'])
 })

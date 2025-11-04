@@ -12,6 +12,7 @@ import type * as auth from "../auth.js";
 import type * as clerk from "../clerk.js";
 import type * as error from "../error.js";
 import type * as form from "../form.js";
+import type * as formField from "../formField.js";
 import type * as http from "../http.js";
 import type * as tag from "../tag.js";
 
@@ -34,6 +35,7 @@ declare const fullApi: ApiFromModules<{
   clerk: typeof clerk;
   error: typeof error;
   form: typeof form;
+  formField: typeof formField;
   http: typeof http;
   tag: typeof tag;
 }>;

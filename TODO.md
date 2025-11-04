@@ -1,0 +1,11 @@
+- [ ] Form builder
+- [ ] Form preview
+- [ ] Validation rules
+- [ ] Share form
+- [ ] Delete form
+- [ ] Submissions
+- [ ] Export Submissions to CSV, XLSX
+- [ ] Timeline
+- [ ] Settings
+- [ ] Tag page (CRUD)
+- [ ] Home page

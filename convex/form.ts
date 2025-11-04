@@ -2,6 +2,7 @@ import { paginationOptsValidator } from 'convex/server'
 import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
 import { resolveIdentity, resolveMembership } from './auth'
+import { notFound } from './error'
 
 export const list = query({
 	args: {
@@ -98,6 +99,44 @@ export const create = mutation({
 			tags: [],
 			lastUpdatedAt: Date.now()
 		})
+	}
+})
+
+export const update = mutation({
+	args: {
+		formId: v.id('form'),
+		title: v.optional(v.string()),
+		description: v.optional(v.string())
+	},
+	returns: v.null(),
+	handler: async (ctx, args) => {
+		const user = await resolveIdentity(ctx)
+
+		const form = await ctx.db.get(args.formId)
+
+		if (!form) throw notFound()
+
+		if (user.subject !== form.businessId) {
+			await resolveMembership(ctx, {
+				organizationId: form.businessId,
+				userId: user.subject
+			})
+		}
+
+		const updates: {
+			title?: string
+			description?: string
+			lastUpdatedAt: number
+		} = {
+			lastUpdatedAt: Date.now()
+		}
+
+		if (args.title !== undefined) updates.title = args.title
+		if (args.description !== undefined) updates.description = args.description
+
+		await ctx.db.patch(args.formId, updates)
+
+		return null
 	}
 })
 

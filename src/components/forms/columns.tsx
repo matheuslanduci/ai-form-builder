@@ -139,17 +139,10 @@ function TagsCombobox({ form }: { form: Form }) {
 	const [searchValue, setSearchValue] = useState('')
 	const [newTagName, setNewTagName] = useState('')
 	const [newTagColor, setNewTagColor] = useState('#3b82f6')
-	const { slug } = useParams({ from: '/_platform/{-$slug}/forms/' })
 	const { user } = useUser()
 	const { organization } = useOrganization()
 
-	console.log('Slug for tags query:', slug)
-
-	const {
-		data: tags,
-		error,
-		isLoading
-	} = useQuery(
+	const { data: tags } = useQuery(
 		convexQuery(api.tag.list, {
 			businessId: organization?.id ?? (user?.id as string)
 		})
@@ -158,12 +151,6 @@ function TagsCombobox({ form }: { form: Form }) {
 	const filteredTags = tags?.filter((tag) =>
 		tag.name.toLowerCase().includes(searchValue.toLowerCase())
 	)
-
-	console.log('Tags data:', tags)
-	console.log('Tags error:', error)
-	console.log('Tags loading:', isLoading)
-	console.log('Filtered tags:', filteredTags)
-	console.log('Search value:', searchValue)
 
 	const updateTagsMutation = useMutation({
 		mutationFn: useConvexMutation(api.form.updateTags),
