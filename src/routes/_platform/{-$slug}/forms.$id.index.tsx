@@ -268,7 +268,7 @@ function SortableFormField({
 								className="flex items-center gap-2"
 								key={`${option}-${index.toString()}`}
 							>
-								<Checkbox disabled className="mt-0.5" />
+								<Checkbox className="mt-0.5" disabled />
 								<Input
 									className="text-sm flex-1"
 									defaultValue={option}
@@ -937,11 +937,11 @@ function RouteComponent() {
 							</div>
 							<div className="space-y-1.5">
 								<div className="flex items-center gap-2 text-xs text-gray-400">
-									<Checkbox disabled className="h-3.5 w-3.5" />
+									<Checkbox className="h-3.5 w-3.5" disabled />
 									<span>Option 1</span>
 								</div>
 								<div className="flex items-center gap-2 text-xs text-gray-400">
-									<Checkbox disabled className="h-3.5 w-3.5" />
+									<Checkbox className="h-3.5 w-3.5" disabled />
 									<span>Option 2</span>
 								</div>
 							</div>
