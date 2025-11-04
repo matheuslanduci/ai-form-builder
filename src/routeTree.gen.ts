@@ -14,9 +14,14 @@ import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as PlatformChar123SlugChar125RouteImport } from './routes/_platform/{-$slug}'
 import { Route as PlatformRedirectRouteImport } from './routes/_platform/redirect'
 import { Route as PlatformChar123SlugChar125IndexRouteImport } from './routes/_platform/{-$slug}/index'
-import { Route as PlatformChar123SlugChar125FormsRouteImport } from './routes/_platform/{-$slug}/forms'
 import { Route as AuthSignUpSplatRouteImport } from './routes/_auth/sign-up.$'
 import { Route as AuthSignInSplatRouteImport } from './routes/_auth/sign-in.$'
+import { Route as PlatformChar123SlugChar125FormsIndexRouteImport } from './routes/_platform/{-$slug}/forms.index'
+import { Route as PlatformChar123SlugChar125FormsIdRouteImport } from './routes/_platform/{-$slug}/forms.$id'
+import { Route as PlatformChar123SlugChar125FormsIdIndexRouteImport } from './routes/_platform/{-$slug}/forms.$id.index'
+import { Route as PlatformChar123SlugChar125FormsIdTimelineRouteImport } from './routes/_platform/{-$slug}/forms.$id.timeline'
+import { Route as PlatformChar123SlugChar125FormsIdSubmissionsRouteImport } from './routes/_platform/{-$slug}/forms.$id.submissions'
+import { Route as PlatformChar123SlugChar125FormsIdSettingsRouteImport } from './routes/_platform/{-$slug}/forms.$id.settings'
 
 const PlatformRoute = PlatformRouteImport.update({
   id: '/_platform',
@@ -43,12 +48,6 @@ const PlatformChar123SlugChar125IndexRoute =
     path: '/',
     getParentRoute: () => PlatformChar123SlugChar125Route,
   } as any)
-const PlatformChar123SlugChar125FormsRoute =
-  PlatformChar123SlugChar125FormsRouteImport.update({
-    id: '/forms',
-    path: '/forms',
-    getParentRoute: () => PlatformChar123SlugChar125Route,
-  } as any)
 const AuthSignUpSplatRoute = AuthSignUpSplatRouteImport.update({
   id: '/sign-up/$',
   path: '/sign-up/$',
@@ -59,21 +58,66 @@ const AuthSignInSplatRoute = AuthSignInSplatRouteImport.update({
   path: '/sign-in/$',
   getParentRoute: () => AuthRoute,
 } as any)
+const PlatformChar123SlugChar125FormsIndexRoute =
+  PlatformChar123SlugChar125FormsIndexRouteImport.update({
+    id: '/forms/',
+    path: '/forms/',
+    getParentRoute: () => PlatformChar123SlugChar125Route,
+  } as any)
+const PlatformChar123SlugChar125FormsIdRoute =
+  PlatformChar123SlugChar125FormsIdRouteImport.update({
+    id: '/forms/$id',
+    path: '/forms/$id',
+    getParentRoute: () => PlatformChar123SlugChar125Route,
+  } as any)
+const PlatformChar123SlugChar125FormsIdIndexRoute =
+  PlatformChar123SlugChar125FormsIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => PlatformChar123SlugChar125FormsIdRoute,
+  } as any)
+const PlatformChar123SlugChar125FormsIdTimelineRoute =
+  PlatformChar123SlugChar125FormsIdTimelineRouteImport.update({
+    id: '/timeline',
+    path: '/timeline',
+    getParentRoute: () => PlatformChar123SlugChar125FormsIdRoute,
+  } as any)
+const PlatformChar123SlugChar125FormsIdSubmissionsRoute =
+  PlatformChar123SlugChar125FormsIdSubmissionsRouteImport.update({
+    id: '/submissions',
+    path: '/submissions',
+    getParentRoute: () => PlatformChar123SlugChar125FormsIdRoute,
+  } as any)
+const PlatformChar123SlugChar125FormsIdSettingsRoute =
+  PlatformChar123SlugChar125FormsIdSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => PlatformChar123SlugChar125FormsIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/redirect': typeof PlatformRedirectRoute
   '/{-$slug}': typeof PlatformChar123SlugChar125RouteWithChildren
   '/sign-in/$': typeof AuthSignInSplatRoute
   '/sign-up/$': typeof AuthSignUpSplatRoute
-  '/{-$slug}/forms': typeof PlatformChar123SlugChar125FormsRoute
   '/{-$slug}/': typeof PlatformChar123SlugChar125IndexRoute
+  '/{-$slug}/forms/$id': typeof PlatformChar123SlugChar125FormsIdRouteWithChildren
+  '/{-$slug}/forms': typeof PlatformChar123SlugChar125FormsIndexRoute
+  '/{-$slug}/forms/$id/settings': typeof PlatformChar123SlugChar125FormsIdSettingsRoute
+  '/{-$slug}/forms/$id/submissions': typeof PlatformChar123SlugChar125FormsIdSubmissionsRoute
+  '/{-$slug}/forms/$id/timeline': typeof PlatformChar123SlugChar125FormsIdTimelineRoute
+  '/{-$slug}/forms/$id/': typeof PlatformChar123SlugChar125FormsIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/redirect': typeof PlatformRedirectRoute
   '/sign-in/$': typeof AuthSignInSplatRoute
   '/sign-up/$': typeof AuthSignUpSplatRoute
-  '/{-$slug}/forms': typeof PlatformChar123SlugChar125FormsRoute
   '/{-$slug}': typeof PlatformChar123SlugChar125IndexRoute
+  '/{-$slug}/forms': typeof PlatformChar123SlugChar125FormsIndexRoute
+  '/{-$slug}/forms/$id/settings': typeof PlatformChar123SlugChar125FormsIdSettingsRoute
+  '/{-$slug}/forms/$id/submissions': typeof PlatformChar123SlugChar125FormsIdSubmissionsRoute
+  '/{-$slug}/forms/$id/timeline': typeof PlatformChar123SlugChar125FormsIdTimelineRoute
+  '/{-$slug}/forms/$id': typeof PlatformChar123SlugChar125FormsIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -83,8 +127,13 @@ export interface FileRoutesById {
   '/_platform/{-$slug}': typeof PlatformChar123SlugChar125RouteWithChildren
   '/_auth/sign-in/$': typeof AuthSignInSplatRoute
   '/_auth/sign-up/$': typeof AuthSignUpSplatRoute
-  '/_platform/{-$slug}/forms': typeof PlatformChar123SlugChar125FormsRoute
   '/_platform/{-$slug}/': typeof PlatformChar123SlugChar125IndexRoute
+  '/_platform/{-$slug}/forms/$id': typeof PlatformChar123SlugChar125FormsIdRouteWithChildren
+  '/_platform/{-$slug}/forms/': typeof PlatformChar123SlugChar125FormsIndexRoute
+  '/_platform/{-$slug}/forms/$id/settings': typeof PlatformChar123SlugChar125FormsIdSettingsRoute
+  '/_platform/{-$slug}/forms/$id/submissions': typeof PlatformChar123SlugChar125FormsIdSubmissionsRoute
+  '/_platform/{-$slug}/forms/$id/timeline': typeof PlatformChar123SlugChar125FormsIdTimelineRoute
+  '/_platform/{-$slug}/forms/$id/': typeof PlatformChar123SlugChar125FormsIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -93,15 +142,24 @@ export interface FileRouteTypes {
     | '/{-$slug}'
     | '/sign-in/$'
     | '/sign-up/$'
-    | '/{-$slug}/forms'
     | '/{-$slug}/'
+    | '/{-$slug}/forms/$id'
+    | '/{-$slug}/forms'
+    | '/{-$slug}/forms/$id/settings'
+    | '/{-$slug}/forms/$id/submissions'
+    | '/{-$slug}/forms/$id/timeline'
+    | '/{-$slug}/forms/$id/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/redirect'
     | '/sign-in/$'
     | '/sign-up/$'
-    | '/{-$slug}/forms'
     | '/{-$slug}'
+    | '/{-$slug}/forms'
+    | '/{-$slug}/forms/$id/settings'
+    | '/{-$slug}/forms/$id/submissions'
+    | '/{-$slug}/forms/$id/timeline'
+    | '/{-$slug}/forms/$id'
   id:
     | '__root__'
     | '/_auth'
@@ -110,8 +168,13 @@ export interface FileRouteTypes {
     | '/_platform/{-$slug}'
     | '/_auth/sign-in/$'
     | '/_auth/sign-up/$'
-    | '/_platform/{-$slug}/forms'
     | '/_platform/{-$slug}/'
+    | '/_platform/{-$slug}/forms/$id'
+    | '/_platform/{-$slug}/forms/'
+    | '/_platform/{-$slug}/forms/$id/settings'
+    | '/_platform/{-$slug}/forms/$id/submissions'
+    | '/_platform/{-$slug}/forms/$id/timeline'
+    | '/_platform/{-$slug}/forms/$id/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -156,13 +219,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlatformChar123SlugChar125IndexRouteImport
       parentRoute: typeof PlatformChar123SlugChar125Route
     }
-    '/_platform/{-$slug}/forms': {
-      id: '/_platform/{-$slug}/forms'
-      path: '/forms'
-      fullPath: '/{-$slug}/forms'
-      preLoaderRoute: typeof PlatformChar123SlugChar125FormsRouteImport
-      parentRoute: typeof PlatformChar123SlugChar125Route
-    }
     '/_auth/sign-up/$': {
       id: '/_auth/sign-up/$'
       path: '/sign-up/$'
@@ -176,6 +232,48 @@ declare module '@tanstack/react-router' {
       fullPath: '/sign-in/$'
       preLoaderRoute: typeof AuthSignInSplatRouteImport
       parentRoute: typeof AuthRoute
+    }
+    '/_platform/{-$slug}/forms/': {
+      id: '/_platform/{-$slug}/forms/'
+      path: '/forms'
+      fullPath: '/{-$slug}/forms'
+      preLoaderRoute: typeof PlatformChar123SlugChar125FormsIndexRouteImport
+      parentRoute: typeof PlatformChar123SlugChar125Route
+    }
+    '/_platform/{-$slug}/forms/$id': {
+      id: '/_platform/{-$slug}/forms/$id'
+      path: '/forms/$id'
+      fullPath: '/{-$slug}/forms/$id'
+      preLoaderRoute: typeof PlatformChar123SlugChar125FormsIdRouteImport
+      parentRoute: typeof PlatformChar123SlugChar125Route
+    }
+    '/_platform/{-$slug}/forms/$id/': {
+      id: '/_platform/{-$slug}/forms/$id/'
+      path: '/'
+      fullPath: '/{-$slug}/forms/$id/'
+      preLoaderRoute: typeof PlatformChar123SlugChar125FormsIdIndexRouteImport
+      parentRoute: typeof PlatformChar123SlugChar125FormsIdRoute
+    }
+    '/_platform/{-$slug}/forms/$id/timeline': {
+      id: '/_platform/{-$slug}/forms/$id/timeline'
+      path: '/timeline'
+      fullPath: '/{-$slug}/forms/$id/timeline'
+      preLoaderRoute: typeof PlatformChar123SlugChar125FormsIdTimelineRouteImport
+      parentRoute: typeof PlatformChar123SlugChar125FormsIdRoute
+    }
+    '/_platform/{-$slug}/forms/$id/submissions': {
+      id: '/_platform/{-$slug}/forms/$id/submissions'
+      path: '/submissions'
+      fullPath: '/{-$slug}/forms/$id/submissions'
+      preLoaderRoute: typeof PlatformChar123SlugChar125FormsIdSubmissionsRouteImport
+      parentRoute: typeof PlatformChar123SlugChar125FormsIdRoute
+    }
+    '/_platform/{-$slug}/forms/$id/settings': {
+      id: '/_platform/{-$slug}/forms/$id/settings'
+      path: '/settings'
+      fullPath: '/{-$slug}/forms/$id/settings'
+      preLoaderRoute: typeof PlatformChar123SlugChar125FormsIdSettingsRouteImport
+      parentRoute: typeof PlatformChar123SlugChar125FormsIdRoute
     }
   }
 }
@@ -192,15 +290,43 @@ const AuthRouteChildren: AuthRouteChildren = {
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
+interface PlatformChar123SlugChar125FormsIdRouteChildren {
+  PlatformChar123SlugChar125FormsIdSettingsRoute: typeof PlatformChar123SlugChar125FormsIdSettingsRoute
+  PlatformChar123SlugChar125FormsIdSubmissionsRoute: typeof PlatformChar123SlugChar125FormsIdSubmissionsRoute
+  PlatformChar123SlugChar125FormsIdTimelineRoute: typeof PlatformChar123SlugChar125FormsIdTimelineRoute
+  PlatformChar123SlugChar125FormsIdIndexRoute: typeof PlatformChar123SlugChar125FormsIdIndexRoute
+}
+
+const PlatformChar123SlugChar125FormsIdRouteChildren: PlatformChar123SlugChar125FormsIdRouteChildren =
+  {
+    PlatformChar123SlugChar125FormsIdSettingsRoute:
+      PlatformChar123SlugChar125FormsIdSettingsRoute,
+    PlatformChar123SlugChar125FormsIdSubmissionsRoute:
+      PlatformChar123SlugChar125FormsIdSubmissionsRoute,
+    PlatformChar123SlugChar125FormsIdTimelineRoute:
+      PlatformChar123SlugChar125FormsIdTimelineRoute,
+    PlatformChar123SlugChar125FormsIdIndexRoute:
+      PlatformChar123SlugChar125FormsIdIndexRoute,
+  }
+
+const PlatformChar123SlugChar125FormsIdRouteWithChildren =
+  PlatformChar123SlugChar125FormsIdRoute._addFileChildren(
+    PlatformChar123SlugChar125FormsIdRouteChildren,
+  )
+
 interface PlatformChar123SlugChar125RouteChildren {
-  PlatformChar123SlugChar125FormsRoute: typeof PlatformChar123SlugChar125FormsRoute
   PlatformChar123SlugChar125IndexRoute: typeof PlatformChar123SlugChar125IndexRoute
+  PlatformChar123SlugChar125FormsIdRoute: typeof PlatformChar123SlugChar125FormsIdRouteWithChildren
+  PlatformChar123SlugChar125FormsIndexRoute: typeof PlatformChar123SlugChar125FormsIndexRoute
 }
 
 const PlatformChar123SlugChar125RouteChildren: PlatformChar123SlugChar125RouteChildren =
   {
-    PlatformChar123SlugChar125FormsRoute: PlatformChar123SlugChar125FormsRoute,
     PlatformChar123SlugChar125IndexRoute: PlatformChar123SlugChar125IndexRoute,
+    PlatformChar123SlugChar125FormsIdRoute:
+      PlatformChar123SlugChar125FormsIdRouteWithChildren,
+    PlatformChar123SlugChar125FormsIndexRoute:
+      PlatformChar123SlugChar125FormsIndexRoute,
   }
 
 const PlatformChar123SlugChar125RouteWithChildren =

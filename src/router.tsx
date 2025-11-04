@@ -6,6 +6,7 @@ import {
 } from '@tanstack/react-query'
 import { createRouter } from '@tanstack/react-router'
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query'
+import { toast } from 'sonner'
 import { envClient } from './env/env.client'
 import { routeTree } from './routeTree.gen'
 
@@ -25,7 +26,7 @@ export function getRouter() {
 		},
 		mutationCache: new MutationCache({
 			onError: (error) => {
-				// TODO: Handle mutation errors globally
+				toast.error(error.message || 'An error occurred')
 			}
 		})
 	})

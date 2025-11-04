@@ -37,7 +37,7 @@ export function AppSidebarContent() {
 								<SidebarMenuButton asChild>
 									<Link
 										activeOptions={{
-											exact: to !== '/'
+											exact: to === '/{-$slug}'
 										}}
 										activeProps={{
 											'data-active': true

@@ -20,7 +20,7 @@ function RouteComponent() {
 	return (
 		<SidebarProvider>
 			<AppSidebar />
-			<main className="w-screen">
+			<main className="w-screen relative">
 				<Outlet />
 			</main>
 		</SidebarProvider>

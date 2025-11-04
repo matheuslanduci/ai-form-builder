@@ -9,6 +9,7 @@ import {
 import type { ConvexReactClient } from 'convex/react'
 import { ConvexProviderWithClerk } from 'convex/react-clerk'
 import type * as React from 'react'
+import { Toaster } from '~/components/ui/sonner'
 import { envClient } from '~/env/env.client'
 import { getAuth } from '~/server/auth.server'
 import appCss from '../styles.css?url'
@@ -60,6 +61,7 @@ function RootComponent() {
 			<ConvexProviderWithClerk client={convex} useAuth={useAuth}>
 				<RootDocument>
 					<Outlet />
+					<Toaster />
 				</RootDocument>
 			</ConvexProviderWithClerk>
 		</ClerkProvider>
