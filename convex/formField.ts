@@ -1,4 +1,6 @@
 import { v } from 'convex/values'
+import { internal } from './_generated/api'
+import type { Id } from './_generated/dataModel'
 import { mutation, query } from './_generated/server'
 import { resolveIdentity, resolveMembership } from './auth'
 import { notFound } from './error'
@@ -101,7 +103,7 @@ export const create = mutation({
 		// Verify form belongs to business
 		if (form.businessId !== args.businessId) throw notFound()
 
-		return await ctx.db.insert('formField', {
+		const fieldId = await ctx.db.insert('formField', {
 			formId: args.formId,
 			pageId: args.pageId,
 			type: args.type,
@@ -111,6 +113,20 @@ export const create = mutation({
 			order: args.order,
 			options: args.options
 		})
+
+		// Record the field creation in edit history
+		await ctx.scheduler.runAfter(0, internal.formEditHistory.recordEdit, {
+			formId: args.formId,
+			userId: user.subject,
+			editType: 'field_created' as const,
+			changeDetails: {
+				fieldId,
+				fieldTitle: args.title,
+				fieldType: args.type
+			}
+		})
+
+		return fieldId
 	}
 })
 
@@ -151,12 +167,60 @@ export const update = mutation({
 			options?: string[]
 		} = {}
 
-		if (args.title !== undefined) updates.title = args.title
-		if (args.placeholder !== undefined) updates.placeholder = args.placeholder
-		if (args.required !== undefined) updates.required = args.required
-		if (args.options !== undefined) updates.options = args.options
+		const changeDetails: {
+			fieldId: Id<'formField'>
+			fieldTitle: string
+			fieldType:
+				| 'singleline'
+				| 'multiline'
+				| 'number'
+				| 'select'
+				| 'checkbox'
+				| 'date'
+			oldFieldTitle?: string
+			newFieldTitle?: string
+			oldFieldPlaceholder?: string
+			newFieldPlaceholder?: string
+			oldFieldRequired?: boolean
+			newFieldRequired?: boolean
+			oldFieldOptions?: string[]
+			newFieldOptions?: string[]
+		} = {
+			fieldId: args.fieldId,
+			fieldTitle: field.title,
+			fieldType: field.type
+		}
+
+		if (args.title !== undefined) {
+			updates.title = args.title
+			changeDetails.oldFieldTitle = field.title
+			changeDetails.newFieldTitle = args.title
+		}
+		if (args.placeholder !== undefined) {
+			updates.placeholder = args.placeholder
+			changeDetails.oldFieldPlaceholder = field.placeholder
+			changeDetails.newFieldPlaceholder = args.placeholder
+		}
+		if (args.required !== undefined) {
+			updates.required = args.required
+			changeDetails.oldFieldRequired = field.required
+			changeDetails.newFieldRequired = args.required
+		}
+		if (args.options !== undefined) {
+			updates.options = args.options
+			changeDetails.oldFieldOptions = field.options
+			changeDetails.newFieldOptions = args.options
+		}
 
 		await ctx.db.patch(args.fieldId, updates)
+
+		// Record the field update in edit history
+		await ctx.scheduler.runAfter(0, internal.formEditHistory.recordEdit, {
+			formId: field.formId,
+			userId: user.subject,
+			editType: 'field_updated' as const,
+			changeDetails
+		})
 
 		return null
 	}
@@ -189,6 +253,22 @@ export const remove = mutation({
 		if (form.businessId !== args.businessId) throw notFound()
 
 		await ctx.db.delete(args.fieldId)
+
+		// Record the field deletion in edit history
+		await ctx.scheduler.runAfter(0, internal.formEditHistory.recordEdit, {
+			formId: field.formId,
+			userId: user.subject,
+			editType: 'field_deleted' as const,
+			changeDetails: {
+				fieldId: args.fieldId,
+				fieldTitle: field.title,
+				fieldType: field.type,
+				oldFieldTitle: field.title,
+				oldFieldPlaceholder: field.placeholder,
+				oldFieldRequired: field.required,
+				oldFieldOptions: field.options
+			}
+		})
 
 		return null
 	}
@@ -223,6 +303,14 @@ export const reorder = mutation({
 		for (let i = 0; i < args.fieldIds.length; i++) {
 			await ctx.db.patch(args.fieldIds[i], { order: i })
 		}
+
+		// Record the field reordering in edit history
+		await ctx.scheduler.runAfter(0, internal.formEditHistory.recordEdit, {
+			formId: args.formId,
+			userId: user.subject,
+			editType: 'fields_reordered' as const,
+			changeDetails: {}
+		})
 
 		return null
 	}

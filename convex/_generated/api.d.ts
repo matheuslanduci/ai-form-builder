@@ -9,11 +9,15 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as chat from "../chat.js";
 import type * as clerk from "../clerk.js";
 import type * as error from "../error.js";
 import type * as form from "../form.js";
+import type * as formEditHistory from "../formEditHistory.js";
 import type * as formField from "../formField.js";
+import type * as formSubmission from "../formSubmission.js";
 import type * as http from "../http.js";
+import type * as publicForm from "../publicForm.js";
 import type * as tag from "../tag.js";
 
 import type {
@@ -32,11 +36,15 @@ import type {
  */
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  chat: typeof chat;
   clerk: typeof clerk;
   error: typeof error;
   form: typeof form;
+  formEditHistory: typeof formEditHistory;
   formField: typeof formField;
+  formSubmission: typeof formSubmission;
   http: typeof http;
+  publicForm: typeof publicForm;
   tag: typeof tag;
 }>;
 declare const fullApiWithMounts: typeof fullApi;

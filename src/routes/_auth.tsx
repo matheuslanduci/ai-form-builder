@@ -5,7 +5,7 @@ export const Route = createFileRoute('/_auth')({
 	beforeLoad: ({ context }) => {
 		if (context.auth.userId) {
 			throw redirect({
-				to: '/{-$slug}'
+				to: '/'
 			})
 		}
 	}

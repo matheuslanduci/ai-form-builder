@@ -1,11 +1,19 @@
-- [ ] Form builder
-- [ ] Form preview
+- [x] Form builder
+- [x] Form preview
 - [ ] Validation rules
-- [ ] Share form
-- [ ] Delete form
-- [ ] Submissions
+- [x] Share form
+- [x] Delete form
+- [x] Submissions
 - [ ] Export Submissions to CSV, XLSX
-- [ ] Timeline
+- [x] Timeline
 - [ ] Settings
 - [ ] Tag page (CRUD)
 - [ ] Home page
+- [ ] Add head tags (SEO)
+- [ ] Send email on submission
+- [ ] Finish Page after submission
+- [ ] Webhooks
+- [ ] Analytics
+- [ ] AI assistant for form building
+- [ ] Human Refactor when possible
+- [ ] Protect Routes

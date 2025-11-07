@@ -15,7 +15,7 @@ export async function resolveMembership(
 ) {
 	const clerkOrg = await ctx.db
 		.query('clerkOrg')
-		.withIndex('byClerkId', (q) => q.eq('clerkId', args.userId))
+		.withIndex('byClerkId', (q) => q.eq('clerkId', args.organizationId))
 		.unique()
 
 	if (!clerkOrg) throw forbidden()

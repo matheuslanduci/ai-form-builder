@@ -10,7 +10,7 @@ import { DataTable } from '~/components/forms/data-table'
 import { Layout } from '~/components/layout/layout'
 import { Button } from '~/components/ui/button'
 
-export const Route = createFileRoute('/_platform/{-$slug}/forms/')({
+export const Route = createFileRoute('/_platform/forms/')({
 	component: RouteComponent
 })
 
@@ -20,7 +20,6 @@ function RouteComponent() {
 	const [cursor, setCursor] = React.useState<string | null>(null)
 	const [cursorStack, setCursorStack] = React.useState<(string | null)[]>([])
 	const navigate = Route.useNavigate()
-	const { slug } = Route.useParams()
 	const { isLoading, data } = useQuery(
 		convexQuery(
 			api.form.list,
@@ -39,8 +38,8 @@ function RouteComponent() {
 		mutationFn: useConvexMutation(api.form.create),
 		onSuccess: (data: Id<'form'>) => {
 			navigate({
-				to: '/{-$slug}/forms/$id',
-				params: { slug, id: data }
+				to: '/forms/$id',
+				params: { id: data }
 			})
 		}
 	})

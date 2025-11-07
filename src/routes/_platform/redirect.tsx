@@ -3,13 +3,9 @@ import z from 'zod'
 
 export const Route = createFileRoute('/_platform/redirect')({
 	component: RouteComponent,
-	beforeLoad: ({ context, search }) => {
-		console.log('redirecting to', search.to)
+	beforeLoad: ({ search }) => {
 		throw redirect({
-			to: `/{-$slug}/${search.to}` as '/{-$slug}',
-			params: {
-				slug: context.auth.org.slug ?? undefined
-			}
+			to: `/${search.to}` as '/'
 		})
 	},
 	validateSearch: z.object({

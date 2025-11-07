@@ -58,5 +58,87 @@ export default defineSchema({
 		options: v.optional(v.array(v.string())) // For select and checkbox fields
 	})
 		.index('byFormId', ['formId'])
-		.index('byFormIdAndPageId', ['formId', 'pageId'])
+		.index('byFormIdAndPageId', ['formId', 'pageId']),
+	chatMessage: defineTable({
+		formId: v.id('form'),
+		userId: v.string(), // Clerk user ID
+		role: v.union(v.literal('user'), v.literal('assistant')),
+		content: v.string(),
+		attachments: v.optional(
+			v.array(
+				v.object({
+					fileId: v.id('_storage'),
+					fileName: v.string(),
+					fileType: v.string(),
+					fileSize: v.number()
+				})
+			)
+		)
+	}).index('byFormId', ['formId']),
+	formEditHistory: defineTable({
+		formId: v.id('form'),
+		userId: v.string(), // Clerk user ID of the person who made the change
+		editType: v.union(
+			v.literal('form_created'),
+			v.literal('form_updated'),
+			v.literal('form_status_changed'),
+			v.literal('field_created'),
+			v.literal('field_updated'),
+			v.literal('field_deleted'),
+			v.literal('fields_reordered'),
+			v.literal('restored')
+		),
+		changeDetails: v.object({
+			// For form updates - store old and new values
+			oldTitle: v.optional(v.string()),
+			newTitle: v.optional(v.string()),
+			oldDescription: v.optional(v.string()),
+			newDescription: v.optional(v.string()),
+			// For status changes
+			oldStatus: v.optional(
+				v.union(
+					v.literal('draft'),
+					v.literal('published'),
+					v.literal('archived')
+				)
+			),
+			newStatus: v.optional(
+				v.union(
+					v.literal('draft'),
+					v.literal('published'),
+					v.literal('archived')
+				)
+			),
+			// For field operations
+			fieldId: v.optional(v.id('formField')),
+			fieldTitle: v.optional(v.string()),
+			fieldType: v.optional(
+				v.union(
+					v.literal('singleline'),
+					v.literal('multiline'),
+					v.literal('number'),
+					v.literal('select'),
+					v.literal('checkbox'),
+					v.literal('date')
+				)
+			),
+			// For field updates - store old and new values
+			oldFieldTitle: v.optional(v.string()),
+			newFieldTitle: v.optional(v.string()),
+			oldFieldPlaceholder: v.optional(v.string()),
+			newFieldPlaceholder: v.optional(v.string()),
+			oldFieldRequired: v.optional(v.boolean()),
+			newFieldRequired: v.optional(v.boolean()),
+			oldFieldOptions: v.optional(v.array(v.string())),
+			newFieldOptions: v.optional(v.array(v.string())),
+			// For restore operations - reference to the original entry
+			restoredFromId: v.optional(v.id('formEditHistory')),
+			restoredAction: v.optional(v.string())
+		})
+	}).index('byFormId', ['formId']),
+	formSubmission: defineTable({
+		formId: v.id('form'),
+		submittedAt: v.number(),
+		data: v.any() // Dynamic object containing field IDs as keys and their values
+	}).index('byFormId', ['formId'])
 })

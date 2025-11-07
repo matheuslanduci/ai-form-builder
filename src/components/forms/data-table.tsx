@@ -1,12 +1,22 @@
-import { Link, useParams } from '@tanstack/react-router'
-import type { ColumnDef } from '@tanstack/react-table'
+import { useConvexMutation } from '@convex-dev/react-query'
+import { useMutation } from '@tanstack/react-query'
+import { Link } from '@tanstack/react-router'
+import type { ColumnDef, Row } from '@tanstack/react-table'
 import {
 	flexRender,
 	getCoreRowModel,
 	useReactTable
 } from '@tanstack/react-table'
+import { api } from 'convex/_generated/api'
 import * as React from 'react'
-import { type Form, FormMenuItems } from '~/components/forms/columns'
+import { useState } from 'react'
+import { toast } from 'sonner'
+import {
+	DeleteFormDialog,
+	type Form,
+	FormMenuItems
+} from '~/components/forms/columns'
+import { ShareFormDialog } from '~/components/forms/share-form-dialog'
 import { Button } from '~/components/ui/button'
 import {
 	ContextMenu,
@@ -21,6 +31,86 @@ import {
 	TableHeader,
 	TableRow
 } from '~/components/ui/table'
+
+function FormTableRow({ row }: { row: Row<Form> }) {
+	const form = row.original
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+	const [shareDialogOpen, setShareDialogOpen] = useState(false)
+
+	const updateStatusMutation = useMutation({
+		mutationFn: useConvexMutation(api.form.updateStatus),
+		onSuccess: () => {
+			toast.success('Status updated successfully')
+		}
+	})
+
+	return (
+		<React.Fragment>
+			<ContextMenu>
+				<ContextMenuTrigger asChild>
+					<TableRow
+						className="cursor-pointer"
+						data-state={row.getIsSelected() && 'selected'}
+					>
+						{row.getVisibleCells().map((cell) => (
+							<TableCell key={cell.id} style={{ width: cell.column.getSize() }}>
+								<Link
+									className="block w-full"
+									onClick={(e) => {
+										const target = e.target as HTMLElement
+										if (
+											target.closest('button') ||
+											target.closest('input[type="checkbox"]') ||
+											target.closest('[role="menuitem"]') ||
+											target.closest('[role="dialog"]') ||
+											target.closest('[role="combobox"]') ||
+											target.closest('[data-radix-popper-content-wrapper]')
+										) {
+											e.preventDefault()
+										}
+									}}
+									params={{ id: form._id }}
+									to="/forms/$id"
+								>
+									{flexRender(cell.column.columnDef.cell, cell.getContext())}
+								</Link>
+							</TableCell>
+						))}
+					</TableRow>
+				</ContextMenuTrigger>
+				<ContextMenuContent className="w-52">
+					<FormMenuItems
+						form={form}
+						onDeleteClick={() => setDeleteDialogOpen(true)}
+						onShareClick={() => setShareDialogOpen(true)}
+						variant="context"
+					/>
+				</ContextMenuContent>
+			</ContextMenu>
+
+			<DeleteFormDialog
+				form={form}
+				onOpenChange={setDeleteDialogOpen}
+				open={deleteDialogOpen}
+			/>
+
+			<ShareFormDialog
+				formId={form._id}
+				formTitle={form.title}
+				isUpdatingStatus={updateStatusMutation.isPending}
+				onOpenChange={setShareDialogOpen}
+				onStatusChange={(status) => {
+					updateStatusMutation.mutate({
+						formId: form._id,
+						status
+					})
+				}}
+				open={shareDialogOpen}
+				status={form.status}
+			/>
+		</React.Fragment>
+	)
+}
 
 interface DataTableProps<TData, TValue> {
 	columns: ColumnDef<TData, TValue>[]
@@ -42,7 +132,6 @@ export function DataTable<TData, TValue>({
 	isLoading
 }: DataTableProps<TData, TValue>) {
 	const [rowSelection, setRowSelection] = React.useState({})
-	const { slug } = useParams({ strict: false })
 
 	const table = useReactTable({
 		data,
@@ -90,59 +179,11 @@ export function DataTable<TData, TValue>({
 								</TableCell>
 							</TableRow>
 						) : table.getRowModel().rows?.length ? (
-							table.getRowModel().rows.map((row) => {
-								const form = row.original as Form
-								return (
-									<ContextMenu key={row.id}>
-										<ContextMenuTrigger asChild>
-											<TableRow
-												className="cursor-pointer"
-												data-state={row.getIsSelected() && 'selected'}
-											>
-												{row.getVisibleCells().map((cell) => (
-													<TableCell
-														key={cell.id}
-														style={{ width: cell.column.getSize() }}
-													>
-														<Link
-															className="block w-full"
-															onClick={(e) => {
-																const target = e.target as HTMLElement
-																if (
-																	target.closest('button') ||
-																	target.closest('input[type="checkbox"]') ||
-																	target.closest('[role="menuitem"]') ||
-																	target.closest('[role="dialog"]') ||
-																	target.closest('[role="combobox"]') ||
-																	target.closest(
-																		'[data-radix-popper-content-wrapper]'
-																	)
-																) {
-																	e.preventDefault()
-																}
-															}}
-															params={{ slug: slug ?? '', id: form._id }}
-															to="/{-$slug}/forms/$id"
-														>
-															{flexRender(
-																cell.column.columnDef.cell,
-																cell.getContext()
-															)}
-														</Link>
-													</TableCell>
-												))}
-											</TableRow>
-										</ContextMenuTrigger>
-										<ContextMenuContent className="w-52">
-											<FormMenuItems
-												form={form}
-												slug={slug ?? ''}
-												variant="context"
-											/>
-										</ContextMenuContent>
-									</ContextMenu>
-								)
-							})
+							table
+								.getRowModel()
+								.rows.map((row) => (
+									<FormTableRow key={row.id} row={row as Row<Form>} />
+								))
 						) : (
 							<TableRow>
 								<TableCell
@@ -157,10 +198,6 @@ export function DataTable<TData, TValue>({
 				</Table>
 			</div>
 			<div className="flex items-center justify-end space-x-2 py-4">
-				<div className="text-muted-foreground flex-1 text-sm">
-					{table.getSelectedRowModel().rows.length} of {data.length} row(s)
-					selected.
-				</div>
 				<div className="space-x-2">
 					<Button
 						disabled={!hasPrev}

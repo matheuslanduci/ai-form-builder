@@ -1,4 +1,4 @@
-import { Link, useParams } from '@tanstack/react-router'
+import { Link } from '@tanstack/react-router'
 import { HomeIcon, NotebookTextIcon } from 'lucide-react'
 import {
 	SidebarContent,
@@ -12,20 +12,18 @@ import {
 
 const items = [
 	{
-		to: '/{-$slug}',
+		to: '/',
 		icon: <HomeIcon />,
 		label: 'Home'
 	},
 	{
-		to: '/{-$slug}/forms',
+		to: '/forms',
 		icon: <NotebookTextIcon />,
 		label: 'Forms'
 	}
 ]
 
 export function AppSidebarContent() {
-	const { slug } = useParams({ from: '/_platform/{-$slug}' })
-
 	return (
 		<SidebarContent className="flex flex-col">
 			<SidebarGroup>
@@ -37,13 +35,12 @@ export function AppSidebarContent() {
 								<SidebarMenuButton asChild>
 									<Link
 										activeOptions={{
-											exact: to === '/{-$slug}'
+											exact: to === '/'
 										}}
 										activeProps={{
 											'data-active': true
 										}}
-										from="/{-$slug}"
-										params={{ slug }}
+										from="/"
 										to={to}
 									>
 										{icon}

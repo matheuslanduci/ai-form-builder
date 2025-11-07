@@ -24,24 +24,35 @@ import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
 import {
 	AlignLeft,
+	ArrowUp,
 	Calendar,
 	CheckSquare,
 	Copy,
 	GripVertical,
 	Hash,
 	ListPlus,
+	Paperclip,
 	Plus,
 	Sparkles,
 	Star,
 	Trash2,
 	Type,
+	Undo2,
 	X
 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '~/components/ui/button'
 import { Checkbox } from '~/components/ui/checkbox'
 import { Input } from '~/components/ui/input'
+import {
+	InputGroup,
+	InputGroupAddon,
+	InputGroupButton,
+	InputGroupText,
+	InputGroupTextarea
+} from '~/components/ui/input-group'
+import { Separator } from '~/components/ui/separator'
 import { Textarea } from '~/components/ui/textarea'
 import { Toggle } from '~/components/ui/toggle'
 import {
@@ -50,6 +61,7 @@ import {
 	TooltipProvider,
 	TooltipTrigger
 } from '~/components/ui/tooltip'
+import { cn } from '~/lib/utils'
 
 type FormField = {
 	_id: Id<'formField'>
@@ -63,7 +75,7 @@ type FormField = {
 	options?: string[]
 }
 
-export const Route = createFileRoute('/_platform/{-$slug}/forms/$id/')({
+export const Route = createFileRoute('/_platform/forms/$id/')({
 	component: RouteComponent
 })
 
@@ -202,7 +214,7 @@ function SortableFormField({
 						className="text-sm text-gray-500"
 						disabled
 						placeholder="Number"
-						type="number"
+						type='number'
 					/>
 				)}
 				{field.type === 'select' && (
@@ -213,7 +225,7 @@ function SortableFormField({
 								key={`${option}-${index.toString()}`}
 							>
 								<Input
-									className="text-sm flex-1"
+									className='text-sm flex-1'
 									defaultValue={option}
 									onBlur={(e) => {
 										const newOptions = [...localOptions]
@@ -233,11 +245,11 @@ function SortableFormField({
 											setLocalOptions(newOptions)
 											onUpdateOptions(newOptions)
 										}}
-										size="icon"
-										type="button"
-										variant="ghost"
+										size='icon'
+										type='button'
+										variant='ghost'
 									>
-										<X className="h-4 w-4" />
+										<X className='h-4 w-4' />
 									</Button>
 								)}
 							</div>
@@ -252,9 +264,9 @@ function SortableFormField({
 								setLocalOptions(newOptions)
 								onUpdateOptions(newOptions)
 							}}
-							size="sm"
-							type="button"
-							variant="outline"
+							size='sm'
+							type='button'
+							variant='outline'
 						>
 							<Plus className="h-3 w-3 mr-1" />
 							Add Option
@@ -270,7 +282,7 @@ function SortableFormField({
 							>
 								<Checkbox className="mt-0.5" disabled />
 								<Input
-									className="text-sm flex-1"
+									className='text-sm flex-1'
 									defaultValue={option}
 									onBlur={(e) => {
 										const newOptions = [...localOptions]
@@ -290,11 +302,11 @@ function SortableFormField({
 											setLocalOptions(newOptions)
 											onUpdateOptions(newOptions)
 										}}
-										size="icon"
-										type="button"
-										variant="ghost"
+										size='icon'
+										type='button'
+										variant='ghost'
 									>
-										<X className="h-4 w-4" />
+										<X className='h-4 w-4' />
 									</Button>
 								)}
 							</div>
@@ -309,9 +321,9 @@ function SortableFormField({
 								setLocalOptions(newOptions)
 								onUpdateOptions(newOptions)
 							}}
-							size="sm"
-							type="button"
-							variant="outline"
+							size='sm'
+							type='button'
+							variant='outline'
 						>
 							<Plus className="h-3 w-3 mr-1" />
 							Add Option
@@ -323,7 +335,7 @@ function SortableFormField({
 						className="text-sm text-gray-500"
 						disabled
 						placeholder="MM/DD/YYYY"
-						type="date"
+						type='date'
 					/>
 				)}
 			</div>
@@ -334,11 +346,11 @@ function SortableFormField({
 					<Tooltip>
 						<TooltipTrigger asChild>
 							<Button
-								className="h-8 w-8 p-0"
+								className='h-8 w-8 p-0'
 								onClick={onDuplicate}
-								size="icon"
-								type="button"
-								variant="ghost"
+								size='icon'
+								type='button'
+								variant='ghost'
 							>
 								<Copy className="h-4 w-4" />
 							</Button>
@@ -355,8 +367,8 @@ function SortableFormField({
 								className="h-8 w-8 p-0 border-0 shadow-none"
 								onPressedChange={onToggleRequired}
 								pressed={field.required}
-								size="sm"
-								variant="outline"
+								size='sm'
+								variant='outline'
 							>
 								<Star
 									className={`h-4 w-4 ${field.required ? 'fill-current' : ''}`}
@@ -375,9 +387,9 @@ function SortableFormField({
 							<Button
 								className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
 								onClick={onRemove}
-								size="icon"
-								type="button"
-								variant="ghost"
+								size='icon'
+								type='button'
+								variant='ghost'
 							>
 								<Trash2 className="h-4 w-4" />
 							</Button>
@@ -401,6 +413,9 @@ function RouteComponent() {
 	const [description, setDescription] = useState('')
 	const [selectedTool, setSelectedTool] = useState<'ai' | 'fields' | null>(null)
 	const [activeId, setActiveId] = useState<string | null>(null)
+	const [chatMessage, setChatMessage] = useState('')
+	const [attachments, setAttachments] = useState<File[]>([])
+	const chatScrollRef = useRef<HTMLDivElement>(null)
 	const queryClient = useQueryClient()
 
 	const businessId = organization?.id ?? (user?.id as string)
@@ -413,7 +428,6 @@ function RouteComponent() {
 		})
 	)
 
-	// Fetch form
 	const { data: form, isLoading } = useQuery(
 		convexQuery(api.form.get, {
 			formId,
@@ -434,12 +448,20 @@ function RouteComponent() {
 			pageId: undefined
 		})
 	)
+	const { data: chatMessages = [] } = useQuery(
+		convexQuery(api.chat.list, {
+			formId,
+			businessId
+		})
+	)
 
 	// Mutation functions
 	const createFieldFn = useConvexMutation(api.formField.create)
 	const updateFieldFn = useConvexMutation(api.formField.update)
 	const deleteFieldFn = useConvexMutation(api.formField.remove)
 	const reorderFieldsFn = useConvexMutation(api.formField.reorder)
+	const createChatMessageFn = useConvexMutation(api.chat.create)
+	const removeChatMessageFn = useConvexMutation(api.chat.remove)
 
 	// Mutations
 	const updateFormMutation = useMutation({
@@ -718,6 +740,50 @@ function RouteComponent() {
 		}
 	}
 
+	const sendMessage = async () => {
+		if (!chatMessage.trim()) return
+
+		try {
+			await createChatMessageFn({
+				formId,
+				businessId,
+				content: chatMessage,
+				attachments: attachments.length > 0 ? [] : undefined // TODO: Handle file uploads
+			})
+
+			setChatMessage('')
+			setAttachments([])
+
+			setTimeout(() => {
+				chatScrollRef.current?.scrollTo({
+					top: chatScrollRef.current.scrollHeight,
+					behavior: 'smooth'
+				})
+			}, 100)
+		} catch {
+			toast.error('Failed to send message')
+		}
+	}
+
+	const undoMessage = async (messageId: Id<'chatMessage'>) => {
+		try {
+			await removeChatMessageFn({
+				messageId,
+				businessId
+			})
+			toast.success('Message removed')
+		} catch {
+			toast.error('Failed to remove message')
+		}
+	}
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: Hacking around
+	useEffect(() => {
+		if (chatScrollRef.current) {
+			chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight
+		}
+	}, [chatMessages.length])
+
 	if (isLoading) {
 		return (
 			<div className="flex items-center justify-center p-8">
@@ -741,7 +807,7 @@ function RouteComponent() {
 								className="text-3xl! shadow-none border-b-transparent! border-b-2! h-auto! font-semibold! border-0 px-0 py-2 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-b-2 focus:border-b-gray-300! placeholder:text-gray-300 bg-transparent"
 								onBlur={handleTitleBlur}
 								onChange={(e) => setTitle(e.target.value)}
-								placeholder="Form Title"
+								placeholder='Form Title'
 								value={title}
 							/>
 							<Textarea
@@ -789,66 +855,221 @@ function RouteComponent() {
 				<div className="flex">
 					{/* Sidebar content */}
 					{selectedTool && (
-						<div className="w-80 bg-white p-6 border-l border-gray-200">
+						<div className="w-80 bg-white border-l border-gray-200 flex flex-col h-full">
 							{selectedTool === 'ai' && (
-								<div className="space-y-4">
-									<h3 className="font-semibold text-lg">AI Assistant</h3>
-									<p className="text-sm text-gray-600">
-										Use AI to generate form fields and suggestions.
-									</p>
+								<div className="flex flex-col h-full">
+									{/* Chat Header */}
+									<div className="p-4 border-b border-gray-200">
+										<h3 className="font-semibold text-lg">AI Assistant</h3>
+									</div>
+
+									{/* Chat Messages */}
+									<div
+										className="flex-1 overflow-y-auto p-4 space-y-4"
+										ref={chatScrollRef}
+									>
+										{chatMessages.length === 0 ? (
+											<div className="flex flex-col items-center justify-center h-full text-center text-gray-400">
+												<Sparkles className="h-12 w-12 mb-3 opacity-50" />
+												<p className="text-sm">Start a conversation with AI</p>
+												<p className='text-xs mt-1'>
+													Ask questions or request form fields
+												</p>
+											</div>
+										) : (
+											chatMessages.map((message) => {
+												const isAssistant = message.role === 'assistant'
+												const userName = isAssistant
+													? 'AI'
+													: user?.fullName || 'User'
+												const userImage = isAssistant
+													? undefined
+													: user?.imageUrl ||
+														`https://api.dicebear.com/7.x/initials/svg?seed=${userName}`
+
+												return (
+													<div
+														className={cn(
+															'flex gap-3',
+															isAssistant ? 'flex-row' : 'flex-row-reverse'
+														)}
+														key={message._id}
+													>
+														{/* Avatar */}
+														<div className='shrink-0'>
+															{isAssistant ? (
+																<div className="w-8 h-8 rounded-full bg-linear-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+																	<Sparkles className='h-4 w-4 text-white' />
+																</div>
+															) : (
+																<img
+																	alt={userName}
+																	className='w-8 h-8 rounded-full'
+																	src={userImage}
+																/>
+															)}
+														</div>
+
+														{/* Message Content */}
+														<div
+															className={cn(
+																'flex-1 min-w-0',
+																isAssistant ? 'mr-8' : 'ml-8'
+															)}
+														>
+															<div
+																className={cn(
+																	'rounded-lg px-3 py-2 text-sm',
+																	isAssistant
+																		? 'bg-gray-100 text-gray-900'
+																		: 'bg-blue-500 text-white'
+																)}
+															>
+																<p className="whitespace-pre-wrap wrap-break-word">
+																	{message.content}
+																</p>
+															</div>
+
+															{/* Message Actions */}
+															<div className="flex items-center gap-2 mt-1.5">
+																<span className='text-xs text-gray-400'>
+																	{new Date(
+																		message._creationTime
+																	).toLocaleTimeString([], {
+																		hour: '2-digit',
+																		minute: '2-digit'
+																	})}
+																</span>
+																{isAssistant && (
+																	<Button
+																		className='h-6 px-2 text-xs'
+																		onClick={() => undoMessage(message._id)}
+																		size='sm'
+																		variant='ghost'
+																	>
+																		<Undo2 className='h-3 w-3 mr-1' />
+																		Undo
+																	</Button>
+																)}
+															</div>
+														</div>
+													</div>
+												)
+											})
+										)}
+									</div>
+
+									{/* Chat Input */}
+									<div className="p-4 border-t border-gray-200">
+										<InputGroup>
+											<InputGroupTextarea
+												onChange={(e) => setChatMessage(e.target.value)}
+												onKeyDown={(e) => {
+													if (e.key === 'Enter' && !e.shiftKey) {
+														e.preventDefault()
+														sendMessage()
+													}
+												}}
+												placeholder='Type your message...'
+												rows={2}
+												value={chatMessage}
+											/>
+											<InputGroupAddon align="block-end">
+												<input
+													accept='*/*'
+													className='hidden'
+													id='chat-file-upload'
+													multiple
+													onChange={(e) => {
+														if (e.target.files) {
+															setAttachments(Array.from(e.target.files))
+														}
+													}}
+													type='file'
+												/>
+												<label htmlFor='chat-file-upload'>
+													<InputGroupButton
+														className='rounded-full'
+														size='icon-xs'
+														type='button'
+														variant='outline'
+													>
+														<Paperclip className='h-3.5 w-3.5' />
+													</InputGroupButton>
+												</label>
+												{attachments.length > 0 && (
+													<InputGroupText className='text-xs'>
+														{attachments.length} file(s)
+													</InputGroupText>
+												)}
+												<Separator className="h-4!" orientation="vertical" />
+												<InputGroupButton
+													className='rounded-full'
+													disabled={!chatMessage.trim()}
+													onClick={sendMessage}
+													size='icon-xs'
+													type='button'
+													variant='default'
+												>
+													<ArrowUp className='h-3.5 w-3.5' />
+													<span className='sr-only'>Send</span>
+												</InputGroupButton>
+											</InputGroupAddon>
+										</InputGroup>
+									</div>
 								</div>
 							)}
 							{selectedTool === 'fields' && (
-								<div className="space-y-4">
+								<div className="space-y-4 p-6">
 									<h3 className="font-semibold text-lg">Fields</h3>
-									<div className="space-y-2">
+									<div className='space-y-2'>
 										{/* Single Line Text Field */}
 										<DraggableFieldButton
 											description="Single line text input."
 											icon={Type}
-											id="text-field"
+											id='text-field'
 											onClick={() => addField('singleline')}
-											title="Text"
+											title='Text'
 										/>
 										{/* Multiline Text Field */}
 										<DraggableFieldButton
 											description="Multiple lines text area."
 											icon={AlignLeft}
-											id="multiline-field"
+											id='multiline-field'
 											onClick={() => addField('multiline')}
-											title="Multiline Text"
+											title='Multiline Text'
 										/>
 										{/* Number Field */}
 										<DraggableFieldButton
 											description="Numeric input field."
 											icon={Hash}
-											id="number-field"
+											id='number-field'
 											onClick={() => addField('number')}
-											title="Number"
+											title='Number'
 										/>
 										{/* Select Field */}
 										<DraggableFieldButton
-											description="Dropdown select."
+											description='Dropdown select.'
 											icon={ListPlus}
-											id="select-field"
+											id='select-field'
 											onClick={() => addField('select')}
-											title="Select"
+											title='Select'
 										/>
 										{/* Checkbox Field */}
 										<DraggableFieldButton
 											description="Multiple choice checkboxes."
 											icon={CheckSquare}
-											id="checkbox-field"
+											id='checkbox-field'
 											onClick={() => addField('checkbox')}
-											title="Checkbox"
+											title='Checkbox'
 										/>
 										{/* Date Field */}
 										<DraggableFieldButton
-											description="Date picker field."
+											description='Date picker field.'
 											icon={Calendar}
-											id="date-field"
+											id='date-field'
 											onClick={() => addField('date')}
-											title="Date"
+											title='Date'
 										/>
 									</div>
 								</div>
@@ -862,7 +1083,7 @@ function RouteComponent() {
 							onClick={() =>
 								setSelectedTool(selectedTool === 'ai' ? null : 'ai')
 							}
-							size="icon"
+							size='icon'
 							variant={selectedTool === 'ai' ? 'default' : 'ghost'}
 						>
 							<Sparkles className="h-5 w-5" />
@@ -871,7 +1092,7 @@ function RouteComponent() {
 							onClick={() =>
 								setSelectedTool(selectedTool === 'fields' ? null : 'fields')
 							}
-							size="icon"
+							size='icon'
 							variant={selectedTool === 'fields' ? 'default' : 'ghost'}
 						>
 							<ListPlus className="h-5 w-5" />

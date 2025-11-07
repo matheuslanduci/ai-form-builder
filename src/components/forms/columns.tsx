@@ -1,7 +1,7 @@
 import { useOrganization, useUser } from '@clerk/tanstack-react-start'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Link, useParams } from '@tanstack/react-router'
+import { Link } from '@tanstack/react-router'
 import type { ColumnDef } from '@tanstack/react-table'
 import { api } from 'convex/_generated/api'
 import type { Doc } from 'convex/_generated/dataModel'
@@ -25,7 +25,6 @@ import {
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '~/components/ui/button'
-import { Checkbox } from '~/components/ui/checkbox'
 import {
 	ColorPicker,
 	ColorPickerAlphaSlider,
@@ -52,6 +51,14 @@ import {
 	ContextMenuSeparator
 } from '~/components/ui/context-menu'
 import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle
+} from '~/components/ui/dialog'
+import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
@@ -73,6 +80,7 @@ import {
 	SelectValue
 } from '~/components/ui/select'
 import { cn } from '~/lib/utils'
+import { ShareFormDialog } from './share-form-dialog'
 
 export type Form = Doc<'form'>
 
@@ -390,11 +398,13 @@ const MENU_COMPONENTS = {
 export function FormMenuItems({
 	form,
 	variant,
-	slug
+	onDeleteClick,
+	onShareClick
 }: {
 	form: Form
 	variant: 'dropdown' | 'context'
-	slug?: string
+	onDeleteClick?: () => void
+	onShareClick?: () => void
 }) {
 	const { Item, Label, Separator } = MENU_COMPONENTS[variant]
 	const updateStatusMutation = useMutation({
@@ -424,32 +434,37 @@ export function FormMenuItems({
 			<Label>Actions</Label>
 
 			<Item asChild>
-				<Link
-					params={{ slug: slug ?? '', id: form._id }}
-					to="/{-$slug}/forms/$id"
-				>
+				<Link params={{ id: form._id }} to="/forms/$id">
 					<Edit className="mr-2 h-4 w-4" />
 					Edit
 				</Link>
 			</Item>
 
-			<Item>
-				<ExternalLink className="mr-2 h-4 w-4" />
-				Preview
+			<Item asChild>
+				<a
+					href={`/forms/${form._id}/preview`}
+					rel="noopener noreferrer"
+					target="_blank"
+				>
+					<ExternalLink className="mr-2 h-4 w-4" />
+					Preview
+				</a>
 			</Item>
 
 			{form.status !== 'archived' && (
-				<Item>
+				<Item
+					onClick={(e) => {
+						e.preventDefault()
+						onShareClick?.()
+					}}
+				>
 					<Share2 className="mr-2 h-4 w-4" />
 					Share
 				</Item>
 			)}
 
 			<Item asChild>
-				<Link
-					params={{ slug: slug ?? '', id: form._id }}
-					to="/{-$slug}/forms/$id/submissions"
-				>
+				<Link params={{ id: form._id }} to="/forms/$id/submissions">
 					<Eye className="mr-2 h-4 w-4" />
 					View submissions
 				</Link>
@@ -488,10 +503,7 @@ export function FormMenuItems({
 			<Separator />
 
 			<Item asChild>
-				<Link
-					params={{ slug: slug ?? '', id: form._id }}
-					to="/{-$slug}/forms/$id/timeline"
-				>
+				<Link params={{ id: form._id }} to="/forms/$id/timeline">
 					<Clock className="mr-2 h-4 w-4" />
 					Timeline
 				</Link>
@@ -504,7 +516,13 @@ export function FormMenuItems({
 
 			<Separator />
 
-			<Item className="text-destructive">
+			<Item
+				className="text-destructive"
+				onClick={(e) => {
+					e.preventDefault()
+					onDeleteClick?.()
+				}}
+			>
 				<Trash className="mr-2 h-4 w-4 text-destructive" />
 				Delete
 			</Item>
@@ -512,30 +530,65 @@ export function FormMenuItems({
 	)
 }
 
+export function DeleteFormDialog({
+	form,
+	open,
+	onOpenChange
+}: {
+	form: Form
+	open: boolean
+	onOpenChange: (open: boolean) => void
+}) {
+	const { user } = useUser()
+	const { organization } = useOrganization()
+
+	const deleteMutation = useMutation({
+		mutationFn: useConvexMutation(api.form.remove),
+		onSuccess: () => {
+			toast.success('Form deleted successfully')
+			onOpenChange(false)
+		},
+		onError: () => {
+			toast.error('Failed to delete form')
+		}
+	})
+
+	const handleDelete = () => {
+		deleteMutation.mutate({
+			formId: form._id,
+			businessId: organization?.id ?? (user?.id as string)
+		})
+	}
+
+	return (
+		<Dialog onOpenChange={onOpenChange} open={open}>
+			<DialogContent>
+				<DialogHeader>
+					<DialogTitle>Delete Form</DialogTitle>
+					<DialogDescription>
+						Are you sure you want to delete "{form.title}"? This action cannot
+						be undone. All form data, fields, and submission history will be
+						permanently deleted.
+					</DialogDescription>
+				</DialogHeader>
+				<DialogFooter>
+					<Button onClick={() => onOpenChange(false)} variant="outline">
+						Cancel
+					</Button>
+					<Button
+						disabled={deleteMutation.isPending}
+						onClick={handleDelete}
+						variant="destructive"
+					>
+						{deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
+	)
+}
+
 export const columns: ColumnDef<Form>[] = [
-	{
-		id: 'select',
-		header: ({ table }) => (
-			<Checkbox
-				aria-label="Select all"
-				checked={
-					table.getIsAllPageRowsSelected() ||
-					(table.getIsSomePageRowsSelected() && 'indeterminate')
-				}
-				onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-			/>
-		),
-		cell: ({ row }) => (
-			<Checkbox
-				aria-label="Select row"
-				checked={row.getIsSelected()}
-				onCheckedChange={(value) => row.toggleSelected(!!value)}
-			/>
-		),
-		enableSorting: false,
-		enableHiding: false,
-		size: 40
-	},
 	{
 		accessorKey: 'title',
 		header: 'Title',
@@ -590,20 +643,56 @@ export const columns: ColumnDef<Form>[] = [
 		size: 50,
 		cell: ({ row }) => {
 			const form = row.original
-			const { slug } = useParams({ strict: false })
+			const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+			const [shareDialogOpen, setShareDialogOpen] = useState(false)
+
+			const updateStatusMutation = useMutation({
+				mutationFn: useConvexMutation(api.form.updateStatus),
+				onSuccess: () => {
+					toast.success('Status updated successfully')
+				}
+			})
 
 			return (
-				<DropdownMenu>
-					<DropdownMenuTrigger asChild>
-						<Button className="h-8 w-8 p-0" variant="ghost">
-							<span className="sr-only">Open menu</span>
-							<MoreHorizontal className="h-4 w-4" />
-						</Button>
-					</DropdownMenuTrigger>
-					<DropdownMenuContent align="end">
-						<FormMenuItems form={form} slug={slug ?? ''} variant="dropdown" />
-					</DropdownMenuContent>
-				</DropdownMenu>
+				<>
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button className="h-8 w-8 p-0" variant="ghost">
+								<span className="sr-only">Open menu</span>
+								<MoreHorizontal className="h-4 w-4" />
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="end">
+							<FormMenuItems
+								form={form}
+								onDeleteClick={() => setDeleteDialogOpen(true)}
+								onShareClick={() => setShareDialogOpen(true)}
+								variant="dropdown"
+							/>
+						</DropdownMenuContent>
+					</DropdownMenu>
+
+					<DeleteFormDialog
+						form={form}
+						onOpenChange={setDeleteDialogOpen}
+						open={deleteDialogOpen}
+					/>
+
+					<ShareFormDialog
+						formId={form._id}
+						formTitle={form.title}
+						isUpdatingStatus={updateStatusMutation.isPending}
+						onOpenChange={setShareDialogOpen}
+						onStatusChange={(status) => {
+							updateStatusMutation.mutate({
+								formId: form._id,
+								status
+							})
+						}}
+						open={shareDialogOpen}
+						status={form.status}
+					/>
+				</>
 			)
 		}
 	}
