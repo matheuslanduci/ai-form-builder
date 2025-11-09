@@ -1,7 +1,7 @@
 import { v } from 'convex/values'
 import { internal } from './_generated/api'
 import type { Id } from './_generated/dataModel'
-import { mutation, query } from './_generated/server'
+import { internalQuery, mutation, query } from './_generated/server'
 import { resolveIdentity, resolveMembership } from './auth'
 import { notFound } from './error'
 
@@ -62,6 +62,32 @@ export const list = query({
 				: fields.filter((f) => f.pageId === undefined)
 
 		// Sort by order
+		return filteredFields.sort((a, b) => a.order - b.order)
+	}
+})
+
+// Internal query for AI form builder
+export const listInternal = internalQuery({
+	args: {
+		formId: v.id('form'),
+		businessId: v.string(),
+		pageId: v.optional(v.string())
+	},
+	handler: async (ctx, args) => {
+		const form = await ctx.db.get(args.formId)
+		if (!form) return []
+		if (form.businessId !== args.businessId) return []
+
+		const fieldsQuery = ctx.db
+			.query('formField')
+			.withIndex('byFormId', (q) => q.eq('formId', args.formId))
+
+		const fields = await fieldsQuery.collect()
+		const filteredFields =
+			args.pageId !== undefined
+				? fields.filter((f) => f.pageId === args.pageId)
+				: fields.filter((f) => f.pageId === undefined)
+
 		return filteredFields.sort((a, b) => a.order - b.order)
 	}
 })

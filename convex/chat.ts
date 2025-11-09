@@ -1,5 +1,10 @@
 import { v } from 'convex/values'
-import { mutation, query } from './_generated/server'
+import {
+	internalMutation,
+	internalQuery,
+	mutation,
+	query
+} from './_generated/server'
 import { resolveIdentity, resolveMembership } from './auth'
 import { notFound } from './error'
 
@@ -16,6 +21,7 @@ export const list = query({
 			userId: v.string(),
 			role: v.union(v.literal('user'), v.literal('assistant')),
 			content: v.string(),
+			streamId: v.optional(v.string()),
 			attachments: v.optional(
 				v.array(
 					v.object({
@@ -96,6 +102,12 @@ export const create = mutation({
 			attachments: args.attachments
 		})
 
+		console.log('[Chat] User message created', {
+			messageId,
+			formId: args.formId,
+			contentLength: args.content.length
+		})
+
 		return messageId
 	}
 })
@@ -130,5 +142,57 @@ export const remove = mutation({
 		await ctx.db.delete(args.messageId)
 
 		return null
+	}
+})
+
+// Internal functions for AI form builder
+export const listInternal = internalQuery({
+	args: {
+		formId: v.id('form'),
+		businessId: v.string()
+	},
+	handler: async (ctx, args) => {
+		const form = await ctx.db.get(args.formId)
+		if (!form) return []
+		if (form.businessId !== args.businessId) return []
+
+		const messages = await ctx.db
+			.query('chatMessage')
+			.withIndex('byFormId', (q) => q.eq('formId', args.formId))
+			.collect()
+
+		return messages.sort((a, b) => a._creationTime - b._creationTime)
+	}
+})
+
+export const getByStreamId = internalQuery({
+	args: {
+		streamId: v.string()
+	},
+	handler: async (ctx, args) => {
+		// Find the chat message with this streamId
+		const messages = await ctx.db
+			.query('chatMessage')
+			.filter((q) => q.eq(q.field('streamId'), args.streamId))
+			.first()
+
+		return messages
+	}
+})
+
+export const createInternal = internalMutation({
+	args: {
+		formId: v.id('form'),
+		userId: v.string(),
+		role: v.union(v.literal('user'), v.literal('assistant')),
+		content: v.string()
+	},
+	handler: async (ctx, args) => {
+		return await ctx.db.insert('chatMessage', {
+			formId: args.formId,
+			userId: args.userId,
+			role: args.role,
+			content: args.content
+		})
 	}
 })

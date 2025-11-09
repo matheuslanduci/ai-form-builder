@@ -21,6 +21,7 @@ export type FormField = {
 }
 
 export type ChatMessage = {
+	streamId: string | undefined
 	_id: Id<'chatMessage'>
 	_creationTime: number
 	formId: Id<'form'>

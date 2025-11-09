@@ -8,6 +8,8 @@
  * @module
  */
 
+import type * as aiFormBuilder from "../aiFormBuilder.js";
+import type * as analytics from "../analytics.js";
 import type * as auth from "../auth.js";
 import type * as chat from "../chat.js";
 import type * as clerk from "../clerk.js";
@@ -40,6 +42,8 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  aiFormBuilder: typeof aiFormBuilder;
+  analytics: typeof analytics;
   auth: typeof auth;
   chat: typeof chat;
   clerk: typeof clerk;
@@ -195,6 +199,41 @@ export declare const components: {
             | "failed";
         },
         null
+      >;
+    };
+  };
+  persistentTextStreaming: {
+    lib: {
+      addChunk: FunctionReference<
+        "mutation",
+        "internal",
+        { final: boolean; streamId: string; text: string },
+        any
+      >;
+      createStream: FunctionReference<"mutation", "internal", {}, any>;
+      getStreamStatus: FunctionReference<
+        "query",
+        "internal",
+        { streamId: string },
+        "pending" | "streaming" | "done" | "error" | "timeout"
+      >;
+      getStreamText: FunctionReference<
+        "query",
+        "internal",
+        { streamId: string },
+        {
+          status: "pending" | "streaming" | "done" | "error" | "timeout";
+          text: string;
+        }
+      >;
+      setStreamStatus: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          status: "pending" | "streaming" | "done" | "error" | "timeout";
+          streamId: string;
+        },
+        any
       >;
     };
   };

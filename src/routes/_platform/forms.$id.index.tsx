@@ -19,7 +19,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
 import { ListPlus, Sparkles } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { AIAssistantPanel } from '~/components/form-builder/ai-assistant-panel'
 import { DragOverlayContent } from '~/components/form-builder/drag-overlay-content'
@@ -53,6 +53,10 @@ function RouteComponent() {
 	const [activeId, setActiveId] = useState<string | null>(null)
 	const [chatMessage, setChatMessage] = useState('')
 	const [attachments, setAttachments] = useState<File[]>([])
+	const [isAiProcessing, setIsAiProcessing] = useState(false)
+	const [newMessageIds, setNewMessageIds] = useState<Set<Id<'chatMessage'>>>(
+		new Set()
+	)
 	const chatScrollRef = useRef<HTMLDivElement>(null)
 	const queryClient = useQueryClient()
 
@@ -93,13 +97,27 @@ function RouteComponent() {
 		})
 	)
 
+	// Enhance chat messages with streaming content
+	const messagesWithStreams = useMemo(() => {
+		return chatMessages.map((message) => {
+			// If message has a streamId, we'll use the streaming content
+			// Otherwise, use the stored content
+			return {
+				...message,
+				// We'll update this when we get the stream content
+				_streamId: message.streamId
+			}
+		})
+	}, [chatMessages])
+
 	// Mutation functions
 	const createFieldFn = useConvexMutation(api.formField.create)
 	const updateFieldFn = useConvexMutation(api.formField.update)
 	const deleteFieldFn = useConvexMutation(api.formField.remove)
 	const reorderFieldsFn = useConvexMutation(api.formField.reorder)
-	const createChatMessageFn = useConvexMutation(api.chat.create)
-	const removeChatMessageFn = useConvexMutation(api.chat.remove)
+	const createChatWithStreamFn = useConvexMutation(
+		api.aiFormBuilder.createChatWithStream
+	)
 
 	// Mutations
 	const updateFormMutation = useMutation({
@@ -382,36 +400,35 @@ function RouteComponent() {
 		if (!chatMessage.trim()) return
 
 		try {
-			await createChatMessageFn({
+			setIsAiProcessing(true)
+
+			// Create chat with stream
+			const result = await createChatWithStreamFn({
 				formId,
 				businessId,
-				content: chatMessage,
-				attachments: attachments.length > 0 ? [] : undefined // TODO: Handle file uploads
+				content: chatMessage
 			})
+
+			console.log('[Form Builder] Chat created with stream', result)
+
+			// Track this assistant message as new (for streaming)
+			// The useStream hook in MessageContent will automatically trigger the HTTP endpoint
+			setNewMessageIds((prev) => new Set(prev).add(result.assistantMessageId))
 
 			setChatMessage('')
 			setAttachments([])
 
+			// Scroll to bottom after a short delay
 			setTimeout(() => {
 				chatScrollRef.current?.scrollTo({
 					top: chatScrollRef.current.scrollHeight,
 					behavior: 'smooth'
 				})
 			}, 100)
-		} catch {
+		} catch (error) {
+			console.error('[Form Builder] Failed to send message', error)
 			toast.error('Failed to send message')
-		}
-	}
-
-	const undoMessage = async (messageId: Id<'chatMessage'>) => {
-		try {
-			await removeChatMessageFn({
-				messageId,
-				businessId
-			})
-			toast.success('Message removed')
-		} catch {
-			toast.error('Failed to remove message')
+			setIsAiProcessing(false)
 		}
 	}
 
@@ -419,6 +436,15 @@ function RouteComponent() {
 	useEffect(() => {
 		if (chatScrollRef.current) {
 			chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight
+		}
+	}, [chatMessages.length])
+
+	// Track when AI responds to turn off processing state
+	// biome-ignore lint/correctness/useExhaustiveDependencies: Hacking around
+	useEffect(() => {
+		const lastMessage = chatMessages[chatMessages.length - 1]
+		if (lastMessage?.role === 'assistant' && isAiProcessing) {
+			setIsAiProcessing(false)
 		}
 	}, [chatMessages.length])
 
@@ -498,11 +524,12 @@ function RouteComponent() {
 								<AIAssistantPanel
 									attachments={attachments}
 									chatMessage={chatMessage}
-									messages={chatMessages as ChatMessage[]}
+									isProcessing={isAiProcessing}
+									messages={messagesWithStreams as ChatMessage[]}
+									newMessageIds={newMessageIds}
 									onAttachmentsChange={setAttachments}
 									onChatMessageChange={setChatMessage}
 									onSendMessage={sendMessage}
-									onUndoMessage={undoMessage}
 									userImage={user?.imageUrl || ''}
 									userName={user?.fullName || 'User'}
 								/>
@@ -511,8 +538,7 @@ function RouteComponent() {
 								<FieldsSidebarPanel onAddField={addField} />
 							)}
 						</div>
-					)}
-
+					)}{' '}
 					{/* Sidebar icons */}
 					<div className="w-16 bg-gray-50 border-l border-gray-200 flex flex-col items-center py-4 gap-2">
 						<Button

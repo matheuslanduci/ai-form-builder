@@ -27,6 +27,7 @@ import { Route as PlatformFormsIdIndexRouteImport } from './routes/_platform/for
 import { Route as PlatformFormsIdTimelineRouteImport } from './routes/_platform/forms.$id.timeline'
 import { Route as PlatformFormsIdSubmissionsRouteImport } from './routes/_platform/forms.$id.submissions'
 import { Route as PlatformFormsIdSettingsRouteImport } from './routes/_platform/forms.$id.settings'
+import { Route as PlatformFormsIdAnalyticsRouteImport } from './routes/_platform/forms.$id.analytics'
 
 const PlatformRoute = PlatformRouteImport.update({
   id: '/_platform',
@@ -117,6 +118,12 @@ const PlatformFormsIdSettingsRoute = PlatformFormsIdSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => PlatformFormsIdRoute,
 } as any)
+const PlatformFormsIdAnalyticsRoute =
+  PlatformFormsIdAnalyticsRouteImport.update({
+    id: '/analytics',
+    path: '/analytics',
+    getParentRoute: () => PlatformFormsIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/redirect': typeof PlatformRedirectRoute
@@ -130,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/forms': typeof PlatformFormsIndexRoute
   '/tags': typeof PlatformTagsIndexRoute
   '/webhooks': typeof PlatformWebhooksIndexRoute
+  '/forms/$id/analytics': typeof PlatformFormsIdAnalyticsRoute
   '/forms/$id/settings': typeof PlatformFormsIdSettingsRoute
   '/forms/$id/submissions': typeof PlatformFormsIdSubmissionsRoute
   '/forms/$id/timeline': typeof PlatformFormsIdTimelineRoute
@@ -147,6 +155,7 @@ export interface FileRoutesByTo {
   '/forms': typeof PlatformFormsIndexRoute
   '/tags': typeof PlatformTagsIndexRoute
   '/webhooks': typeof PlatformWebhooksIndexRoute
+  '/forms/$id/analytics': typeof PlatformFormsIdAnalyticsRoute
   '/forms/$id/settings': typeof PlatformFormsIdSettingsRoute
   '/forms/$id/submissions': typeof PlatformFormsIdSubmissionsRoute
   '/forms/$id/timeline': typeof PlatformFormsIdTimelineRoute
@@ -168,6 +177,7 @@ export interface FileRoutesById {
   '/_platform/forms/': typeof PlatformFormsIndexRoute
   '/_platform/tags/': typeof PlatformTagsIndexRoute
   '/_platform/webhooks/': typeof PlatformWebhooksIndexRoute
+  '/_platform/forms/$id/analytics': typeof PlatformFormsIdAnalyticsRoute
   '/_platform/forms/$id/settings': typeof PlatformFormsIdSettingsRoute
   '/_platform/forms/$id/submissions': typeof PlatformFormsIdSubmissionsRoute
   '/_platform/forms/$id/timeline': typeof PlatformFormsIdTimelineRoute
@@ -188,6 +198,7 @@ export interface FileRouteTypes {
     | '/forms'
     | '/tags'
     | '/webhooks'
+    | '/forms/$id/analytics'
     | '/forms/$id/settings'
     | '/forms/$id/submissions'
     | '/forms/$id/timeline'
@@ -205,6 +216,7 @@ export interface FileRouteTypes {
     | '/forms'
     | '/tags'
     | '/webhooks'
+    | '/forms/$id/analytics'
     | '/forms/$id/settings'
     | '/forms/$id/submissions'
     | '/forms/$id/timeline'
@@ -225,6 +237,7 @@ export interface FileRouteTypes {
     | '/_platform/forms/'
     | '/_platform/tags/'
     | '/_platform/webhooks/'
+    | '/_platform/forms/$id/analytics'
     | '/_platform/forms/$id/settings'
     | '/_platform/forms/$id/submissions'
     | '/_platform/forms/$id/timeline'
@@ -367,6 +380,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlatformFormsIdSettingsRouteImport
       parentRoute: typeof PlatformFormsIdRoute
     }
+    '/_platform/forms/$id/analytics': {
+      id: '/_platform/forms/$id/analytics'
+      path: '/analytics'
+      fullPath: '/forms/$id/analytics'
+      preLoaderRoute: typeof PlatformFormsIdAnalyticsRouteImport
+      parentRoute: typeof PlatformFormsIdRoute
+    }
   }
 }
 
@@ -383,6 +403,7 @@ const AuthRouteChildren: AuthRouteChildren = {
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
 interface PlatformFormsIdRouteChildren {
+  PlatformFormsIdAnalyticsRoute: typeof PlatformFormsIdAnalyticsRoute
   PlatformFormsIdSettingsRoute: typeof PlatformFormsIdSettingsRoute
   PlatformFormsIdSubmissionsRoute: typeof PlatformFormsIdSubmissionsRoute
   PlatformFormsIdTimelineRoute: typeof PlatformFormsIdTimelineRoute
@@ -390,6 +411,7 @@ interface PlatformFormsIdRouteChildren {
 }
 
 const PlatformFormsIdRouteChildren: PlatformFormsIdRouteChildren = {
+  PlatformFormsIdAnalyticsRoute: PlatformFormsIdAnalyticsRoute,
   PlatformFormsIdSettingsRoute: PlatformFormsIdSettingsRoute,
   PlatformFormsIdSubmissionsRoute: PlatformFormsIdSubmissionsRoute,
   PlatformFormsIdTimelineRoute: PlatformFormsIdTimelineRoute,

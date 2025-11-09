@@ -201,7 +201,7 @@ export function WebhooksTable({ webhooks, businessId }: WebhooksTableProps) {
 													</span>
 												)}
 											</TableCell>
-											<TableCell>
+											<TableCell onClick={(e) => e.stopPropagation()}>
 												<DropdownMenu>
 													<DropdownMenuTrigger asChild>
 														<Button size="icon" variant="ghost">

@@ -1,7 +1,7 @@
 import { paginationOptsValidator } from 'convex/server'
 import { v } from 'convex/values'
 import { internal } from './_generated/api'
-import { mutation, query } from './_generated/server'
+import { internalQuery, mutation, query } from './_generated/server'
 import { resolveIdentity, resolveMembership } from './auth'
 import { notFound } from './error'
 
@@ -67,6 +67,20 @@ export const get = query({
 
 		if (form.businessId !== args.businessId) throw notFound()
 
+		return form
+	}
+})
+
+// Internal query for AI form builder
+export const getInternal = internalQuery({
+	args: {
+		formId: v.id('form'),
+		businessId: v.string()
+	},
+	handler: async (ctx, args) => {
+		const form = await ctx.db.get(args.formId)
+		if (!form) return null
+		if (form.businessId !== args.businessId) return null
 		return form
 	}
 })

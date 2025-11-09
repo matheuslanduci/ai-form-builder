@@ -14,11 +14,11 @@
 - [x] Home page
 - [x] Finish Page after submission
 - [x] Webhooks
-- [ ] Analytics
-- [ ] AI assistant for form building
+- [x] Align default design for pages (based on settings page)
+- [x] Analytics
+- [x] AI assistant for form building
 - [ ] Human Refactor when possible
 - [ ] Protect Routes
-- [ ] Align default design for pages (based on settings page)
 - [ ] Allow only admin to certain actions (Delete form, view submissions, etc)
 - [ ] Validation rules
 - [ ] Export Submissions to CSV, XLSX

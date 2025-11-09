@@ -65,6 +65,7 @@ export default defineSchema({
 		userId: v.string(), // Clerk user ID
 		role: v.union(v.literal('user'), v.literal('assistant')),
 		content: v.string(),
+		streamId: v.optional(v.string()), // For persistent text streaming
 		attachments: v.optional(
 			v.array(
 				v.object({

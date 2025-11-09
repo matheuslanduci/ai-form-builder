@@ -4,7 +4,15 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
-import { ArrowRight, Inbox, List, Loader2, Plus, Tags } from 'lucide-react'
+import {
+	ArrowRight,
+	Inbox,
+	List,
+	Loader2,
+	Plus,
+	Tags,
+	Webhook
+} from 'lucide-react'
 import { DashboardEmptyState } from '~/components/dashboard/dashboard-empty-state'
 import { FormCard } from '~/components/dashboard/form-card'
 import { QuickActionCard } from '~/components/dashboard/quick-action-card'
@@ -159,10 +167,10 @@ function RouteComponent() {
 									to="/forms"
 								/>
 								<QuickActionCard
-									description="Start building a new form"
-									icon={<Plus className="h-6 w-6 text-gray-600" />}
-									label="Create Form"
-									to="/forms"
+									description="Set up webhooks for your forms"
+									icon={<Webhook className="h-6 w-6 text-gray-600" />}
+									label="Manage Webhooks"
+									to="/webhooks"
 								/>
 							</div>
 						</div>

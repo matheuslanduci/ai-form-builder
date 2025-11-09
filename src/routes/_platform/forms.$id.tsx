@@ -60,6 +60,7 @@ export const Route = createFileRoute('/_platform/forms/$id')({
 const NAV_ITEMS = [
 	{ label: 'Form', path: '/forms/$id' },
 	{ label: 'Submissions', path: '/forms/$id/submissions' },
+	{ label: 'Analytics', path: '/forms/$id/analytics' },
 	{ label: 'Timeline', path: '/forms/$id/timeline' },
 	{ label: 'Settings', path: '/forms/$id/settings' }
 ] as const
