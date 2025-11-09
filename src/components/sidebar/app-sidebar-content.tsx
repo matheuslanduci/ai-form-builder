@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { HomeIcon, NotebookTextIcon } from 'lucide-react'
+import { HomeIcon, NotebookTextIcon, TagsIcon, WebhookIcon } from 'lucide-react'
 import {
 	SidebarContent,
 	SidebarGroup,
@@ -20,6 +20,16 @@ const items = [
 		to: '/forms',
 		icon: <NotebookTextIcon />,
 		label: 'Forms'
+	},
+	{
+		to: '/tags',
+		icon: <TagsIcon />,
+		label: 'Tags'
+	},
+	{
+		to: '/webhooks',
+		icon: <WebhookIcon />,
+		label: 'Webhooks'
 	}
 ]
 

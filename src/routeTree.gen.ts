@@ -14,11 +14,15 @@ import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as PlatformIndexRouteImport } from './routes/_platform/index'
 import { Route as FIdRouteImport } from './routes/f.$id'
 import { Route as PlatformRedirectRouteImport } from './routes/_platform/redirect'
+import { Route as PlatformWebhooksIndexRouteImport } from './routes/_platform/webhooks.index'
+import { Route as PlatformTagsIndexRouteImport } from './routes/_platform/tags.index'
 import { Route as PlatformFormsIndexRouteImport } from './routes/_platform/forms.index'
 import { Route as FormsIdPreviewRouteImport } from './routes/forms.$id.preview'
+import { Route as PlatformWebhooksNewRouteImport } from './routes/_platform/webhooks.new'
 import { Route as PlatformFormsIdRouteImport } from './routes/_platform/forms.$id'
 import { Route as AuthSignUpSplatRouteImport } from './routes/_auth/sign-up.$'
 import { Route as AuthSignInSplatRouteImport } from './routes/_auth/sign-in.$'
+import { Route as PlatformWebhooksIdIndexRouteImport } from './routes/_platform/webhooks.$id.index'
 import { Route as PlatformFormsIdIndexRouteImport } from './routes/_platform/forms.$id.index'
 import { Route as PlatformFormsIdTimelineRouteImport } from './routes/_platform/forms.$id.timeline'
 import { Route as PlatformFormsIdSubmissionsRouteImport } from './routes/_platform/forms.$id.submissions'
@@ -47,6 +51,16 @@ const PlatformRedirectRoute = PlatformRedirectRouteImport.update({
   path: '/redirect',
   getParentRoute: () => PlatformRoute,
 } as any)
+const PlatformWebhooksIndexRoute = PlatformWebhooksIndexRouteImport.update({
+  id: '/webhooks/',
+  path: '/webhooks/',
+  getParentRoute: () => PlatformRoute,
+} as any)
+const PlatformTagsIndexRoute = PlatformTagsIndexRouteImport.update({
+  id: '/tags/',
+  path: '/tags/',
+  getParentRoute: () => PlatformRoute,
+} as any)
 const PlatformFormsIndexRoute = PlatformFormsIndexRouteImport.update({
   id: '/forms/',
   path: '/forms/',
@@ -56,6 +70,11 @@ const FormsIdPreviewRoute = FormsIdPreviewRouteImport.update({
   id: '/forms/$id/preview',
   path: '/forms/$id/preview',
   getParentRoute: () => rootRouteImport,
+} as any)
+const PlatformWebhooksNewRoute = PlatformWebhooksNewRouteImport.update({
+  id: '/webhooks/new',
+  path: '/webhooks/new',
+  getParentRoute: () => PlatformRoute,
 } as any)
 const PlatformFormsIdRoute = PlatformFormsIdRouteImport.update({
   id: '/forms/$id',
@@ -71,6 +90,11 @@ const AuthSignInSplatRoute = AuthSignInSplatRouteImport.update({
   id: '/sign-in/$',
   path: '/sign-in/$',
   getParentRoute: () => AuthRoute,
+} as any)
+const PlatformWebhooksIdIndexRoute = PlatformWebhooksIdIndexRouteImport.update({
+  id: '/webhooks/$id/',
+  path: '/webhooks/$id/',
+  getParentRoute: () => PlatformRoute,
 } as any)
 const PlatformFormsIdIndexRoute = PlatformFormsIdIndexRouteImport.update({
   id: '/',
@@ -101,12 +125,16 @@ export interface FileRoutesByFullPath {
   '/sign-in/$': typeof AuthSignInSplatRoute
   '/sign-up/$': typeof AuthSignUpSplatRoute
   '/forms/$id': typeof PlatformFormsIdRouteWithChildren
+  '/webhooks/new': typeof PlatformWebhooksNewRoute
   '/forms/$id/preview': typeof FormsIdPreviewRoute
   '/forms': typeof PlatformFormsIndexRoute
+  '/tags': typeof PlatformTagsIndexRoute
+  '/webhooks': typeof PlatformWebhooksIndexRoute
   '/forms/$id/settings': typeof PlatformFormsIdSettingsRoute
   '/forms/$id/submissions': typeof PlatformFormsIdSubmissionsRoute
   '/forms/$id/timeline': typeof PlatformFormsIdTimelineRoute
   '/forms/$id/': typeof PlatformFormsIdIndexRoute
+  '/webhooks/$id': typeof PlatformWebhooksIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/redirect': typeof PlatformRedirectRoute
@@ -114,12 +142,16 @@ export interface FileRoutesByTo {
   '/': typeof PlatformIndexRoute
   '/sign-in/$': typeof AuthSignInSplatRoute
   '/sign-up/$': typeof AuthSignUpSplatRoute
+  '/webhooks/new': typeof PlatformWebhooksNewRoute
   '/forms/$id/preview': typeof FormsIdPreviewRoute
   '/forms': typeof PlatformFormsIndexRoute
+  '/tags': typeof PlatformTagsIndexRoute
+  '/webhooks': typeof PlatformWebhooksIndexRoute
   '/forms/$id/settings': typeof PlatformFormsIdSettingsRoute
   '/forms/$id/submissions': typeof PlatformFormsIdSubmissionsRoute
   '/forms/$id/timeline': typeof PlatformFormsIdTimelineRoute
   '/forms/$id': typeof PlatformFormsIdIndexRoute
+  '/webhooks/$id': typeof PlatformWebhooksIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -131,12 +163,16 @@ export interface FileRoutesById {
   '/_auth/sign-in/$': typeof AuthSignInSplatRoute
   '/_auth/sign-up/$': typeof AuthSignUpSplatRoute
   '/_platform/forms/$id': typeof PlatformFormsIdRouteWithChildren
+  '/_platform/webhooks/new': typeof PlatformWebhooksNewRoute
   '/forms/$id/preview': typeof FormsIdPreviewRoute
   '/_platform/forms/': typeof PlatformFormsIndexRoute
+  '/_platform/tags/': typeof PlatformTagsIndexRoute
+  '/_platform/webhooks/': typeof PlatformWebhooksIndexRoute
   '/_platform/forms/$id/settings': typeof PlatformFormsIdSettingsRoute
   '/_platform/forms/$id/submissions': typeof PlatformFormsIdSubmissionsRoute
   '/_platform/forms/$id/timeline': typeof PlatformFormsIdTimelineRoute
   '/_platform/forms/$id/': typeof PlatformFormsIdIndexRoute
+  '/_platform/webhooks/$id/': typeof PlatformWebhooksIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -147,12 +183,16 @@ export interface FileRouteTypes {
     | '/sign-in/$'
     | '/sign-up/$'
     | '/forms/$id'
+    | '/webhooks/new'
     | '/forms/$id/preview'
     | '/forms'
+    | '/tags'
+    | '/webhooks'
     | '/forms/$id/settings'
     | '/forms/$id/submissions'
     | '/forms/$id/timeline'
     | '/forms/$id/'
+    | '/webhooks/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/redirect'
@@ -160,12 +200,16 @@ export interface FileRouteTypes {
     | '/'
     | '/sign-in/$'
     | '/sign-up/$'
+    | '/webhooks/new'
     | '/forms/$id/preview'
     | '/forms'
+    | '/tags'
+    | '/webhooks'
     | '/forms/$id/settings'
     | '/forms/$id/submissions'
     | '/forms/$id/timeline'
     | '/forms/$id'
+    | '/webhooks/$id'
   id:
     | '__root__'
     | '/_auth'
@@ -176,12 +220,16 @@ export interface FileRouteTypes {
     | '/_auth/sign-in/$'
     | '/_auth/sign-up/$'
     | '/_platform/forms/$id'
+    | '/_platform/webhooks/new'
     | '/forms/$id/preview'
     | '/_platform/forms/'
+    | '/_platform/tags/'
+    | '/_platform/webhooks/'
     | '/_platform/forms/$id/settings'
     | '/_platform/forms/$id/submissions'
     | '/_platform/forms/$id/timeline'
     | '/_platform/forms/$id/'
+    | '/_platform/webhooks/$id/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -228,6 +276,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlatformRedirectRouteImport
       parentRoute: typeof PlatformRoute
     }
+    '/_platform/webhooks/': {
+      id: '/_platform/webhooks/'
+      path: '/webhooks'
+      fullPath: '/webhooks'
+      preLoaderRoute: typeof PlatformWebhooksIndexRouteImport
+      parentRoute: typeof PlatformRoute
+    }
+    '/_platform/tags/': {
+      id: '/_platform/tags/'
+      path: '/tags'
+      fullPath: '/tags'
+      preLoaderRoute: typeof PlatformTagsIndexRouteImport
+      parentRoute: typeof PlatformRoute
+    }
     '/_platform/forms/': {
       id: '/_platform/forms/'
       path: '/forms'
@@ -241,6 +303,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/forms/$id/preview'
       preLoaderRoute: typeof FormsIdPreviewRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_platform/webhooks/new': {
+      id: '/_platform/webhooks/new'
+      path: '/webhooks/new'
+      fullPath: '/webhooks/new'
+      preLoaderRoute: typeof PlatformWebhooksNewRouteImport
+      parentRoute: typeof PlatformRoute
     }
     '/_platform/forms/$id': {
       id: '/_platform/forms/$id'
@@ -262,6 +331,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/sign-in/$'
       preLoaderRoute: typeof AuthSignInSplatRouteImport
       parentRoute: typeof AuthRoute
+    }
+    '/_platform/webhooks/$id/': {
+      id: '/_platform/webhooks/$id/'
+      path: '/webhooks/$id'
+      fullPath: '/webhooks/$id'
+      preLoaderRoute: typeof PlatformWebhooksIdIndexRouteImport
+      parentRoute: typeof PlatformRoute
     }
     '/_platform/forms/$id/': {
       id: '/_platform/forms/$id/'
@@ -328,14 +404,22 @@ interface PlatformRouteChildren {
   PlatformRedirectRoute: typeof PlatformRedirectRoute
   PlatformIndexRoute: typeof PlatformIndexRoute
   PlatformFormsIdRoute: typeof PlatformFormsIdRouteWithChildren
+  PlatformWebhooksNewRoute: typeof PlatformWebhooksNewRoute
   PlatformFormsIndexRoute: typeof PlatformFormsIndexRoute
+  PlatformTagsIndexRoute: typeof PlatformTagsIndexRoute
+  PlatformWebhooksIndexRoute: typeof PlatformWebhooksIndexRoute
+  PlatformWebhooksIdIndexRoute: typeof PlatformWebhooksIdIndexRoute
 }
 
 const PlatformRouteChildren: PlatformRouteChildren = {
   PlatformRedirectRoute: PlatformRedirectRoute,
   PlatformIndexRoute: PlatformIndexRoute,
   PlatformFormsIdRoute: PlatformFormsIdRouteWithChildren,
+  PlatformWebhooksNewRoute: PlatformWebhooksNewRoute,
   PlatformFormsIndexRoute: PlatformFormsIndexRoute,
+  PlatformTagsIndexRoute: PlatformTagsIndexRoute,
+  PlatformWebhooksIndexRoute: PlatformWebhooksIndexRoute,
+  PlatformWebhooksIdIndexRoute: PlatformWebhooksIdIndexRoute,
 }
 
 const PlatformRouteWithChildren = PlatformRoute._addFileChildren(

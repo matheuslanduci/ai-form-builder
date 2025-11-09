@@ -24,5 +24,8 @@ export async function resolveMembership(
 
 	if (!membership) throw forbidden()
 
-	return membership
+	return {
+		membership,
+		clerkOrg
+	}
 }

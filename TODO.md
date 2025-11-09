@@ -1,19 +1,24 @@
 - [x] Form builder
 - [x] Form preview
-- [ ] Validation rules
 - [x] Share form
 - [x] Delete form
 - [x] Submissions
-- [ ] Export Submissions to CSV, XLSX
 - [x] Timeline
-- [ ] Settings
-- [ ] Tag page (CRUD)
-- [ ] Home page
-- [ ] Add head tags (SEO)
-- [ ] Send email on submission
-- [ ] Finish Page after submission
-- [ ] Webhooks
+- [x] Send email on submission
+- [x] Settings
+- [x] Refactor
+- [x] Remove excessive shadows
+- [x] Fix pagination
+- [x] Add head tags (SEO)
+- [x] Tag page (CRUD)
+- [x] Home page
+- [x] Finish Page after submission
+- [x] Webhooks
 - [ ] Analytics
 - [ ] AI assistant for form building
 - [ ] Human Refactor when possible
 - [ ] Protect Routes
+- [ ] Align default design for pages (based on settings page)
+- [ ] Allow only admin to certain actions (Delete form, view submissions, etc)
+- [ ] Validation rules
+- [ ] Export Submissions to CSV, XLSX

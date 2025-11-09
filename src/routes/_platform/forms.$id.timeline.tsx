@@ -1,309 +1,41 @@
 import { useOrganization, useUser } from '@clerk/tanstack-react-start'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
-import {
-	Calendar,
-	FileText,
-	GitBranch,
-	ListPlus,
-	Pencil,
-	RotateCcw,
-	Settings,
-	Trash2
-} from 'lucide-react'
-import * as React from 'react'
+import { Calendar } from 'lucide-react'
+import { useState } from 'react'
 import { toast } from 'sonner'
-import { Button } from '~/components/ui/button'
+import { z } from 'zod'
+import { TimelineEntryCard } from '~/components/forms/timeline/timeline-entry-card'
+import { Pagination } from '~/components/ui/pagination'
+import { seo } from '~/lib/seo'
 
-export const Route = createFileRoute('/_platform/forms/$id/timeline')({
-	component: RouteComponent
+const timelineSearchSchema = z.object({
+	cursor: z.string().nullable().catch(null).default(null)
 })
 
-type EditType =
-	| 'form_created'
-	| 'form_updated'
-	| 'form_status_changed'
-	| 'field_created'
-	| 'field_updated'
-	| 'field_deleted'
-	| 'fields_reordered'
-	| 'restored'
-
-interface TimelineEntry {
-	_id: Id<'formEditHistory'>
-	_creationTime: number
-	formId: Id<'form'>
-	userId: string
-	editType: EditType
-	changeDetails: {
-		oldTitle?: string
-		newTitle?: string
-		oldDescription?: string
-		newDescription?: string
-		oldStatus?: 'draft' | 'published' | 'archived'
-		newStatus?: 'draft' | 'published' | 'archived'
-		fieldId?: Id<'formField'>
-		fieldTitle?: string
-		fieldType?:
-			| 'singleline'
-			| 'multiline'
-			| 'number'
-			| 'select'
-			| 'checkbox'
-			| 'date'
-		oldFieldTitle?: string
-		newFieldTitle?: string
-		oldFieldPlaceholder?: string
-		newFieldPlaceholder?: string
-		oldFieldRequired?: boolean
-		newFieldRequired?: boolean
-		oldFieldOptions?: string[]
-		newFieldOptions?: string[]
-		restoredFromId?: Id<'formEditHistory'>
-		restoredAction?: string
-	}
-	user: {
-		firstName?: string
-		lastName?: string
-		avatarUrl?: string
-	} | null
-}
-
-function getEditIcon(editType: EditType) {
-	switch (editType) {
-		case 'form_created':
-			return FileText
-		case 'form_updated':
-			return Pencil
-		case 'form_status_changed':
-			return Settings
-		case 'field_created':
-			return ListPlus
-		case 'field_updated':
-			return Pencil
-		case 'field_deleted':
-			return Trash2
-		case 'fields_reordered':
-			return GitBranch
-		case 'restored':
-			return RotateCcw
-	}
-}
-
-function getEditDescription(entry: TimelineEntry) {
-	const { editType, changeDetails } = entry
-
-	switch (editType) {
-		case 'form_created':
-			return `Created form "${changeDetails.newTitle}"`
-		case 'form_updated': {
-			const changes = []
-			if (
-				changeDetails.oldTitle !== undefined &&
-				changeDetails.newTitle !== undefined
-			) {
-				changes.push(
-					`title from "${changeDetails.oldTitle}" to "${changeDetails.newTitle}"`
-				)
-			}
-			if (
-				changeDetails.oldDescription !== undefined &&
-				changeDetails.newDescription !== undefined
-			) {
-				const oldDesc = changeDetails.oldDescription || '(empty)'
-				const newDesc = changeDetails.newDescription || '(empty)'
-				changes.push(`description from "${oldDesc}" to "${newDesc}"`)
-			}
-			return changes.length > 0
-				? `Updated ${changes.join(' and ')}`
-				: 'Updated form'
-		}
-		case 'form_status_changed':
-			return `Changed status from "${changeDetails.oldStatus}" to "${changeDetails.newStatus}"`
-		case 'field_created':
-			return `Added field "${changeDetails.fieldTitle}" (${changeDetails.fieldType})`
-		case 'field_updated': {
-			const changes = []
-			if (
-				changeDetails.oldFieldTitle !== undefined &&
-				changeDetails.newFieldTitle !== undefined
-			) {
-				changes.push(
-					`title from "${changeDetails.oldFieldTitle}" to "${changeDetails.newFieldTitle}"`
-				)
-			}
-			if (
-				changeDetails.oldFieldPlaceholder !== undefined &&
-				changeDetails.newFieldPlaceholder !== undefined
-			) {
-				changes.push(
-					`placeholder from "${changeDetails.oldFieldPlaceholder || '(empty)'}" to "${changeDetails.newFieldPlaceholder || '(empty)'}"`
-				)
-			}
-			if (
-				changeDetails.oldFieldRequired !== undefined &&
-				changeDetails.newFieldRequired !== undefined
-			) {
-				changes.push(
-					`required from ${changeDetails.oldFieldRequired} to ${changeDetails.newFieldRequired}`
-				)
-			}
-			if (
-				changeDetails.oldFieldOptions !== undefined &&
-				changeDetails.newFieldOptions !== undefined
-			) {
-				changes.push(
-					`options from [${changeDetails.oldFieldOptions.join(', ')}] to [${changeDetails.newFieldOptions.join(', ')}]`
-				)
-			}
-			return changes.length > 0
-				? `Updated field "${changeDetails.fieldTitle}": ${changes.join(', ')}`
-				: `Updated field "${changeDetails.fieldTitle}"`
-		}
-		case 'field_deleted':
-			return `Deleted field "${changeDetails.fieldTitle}"`
-		case 'fields_reordered':
-			return 'Reordered form fields'
-		case 'restored': {
-			const action = changeDetails.restoredAction || 'a previous change'
-			const changes = []
-
-			if (
-				changeDetails.oldTitle !== undefined &&
-				changeDetails.newTitle !== undefined
-			) {
-				changes.push(
-					`title from "${changeDetails.oldTitle}" to "${changeDetails.newTitle}"`
-				)
-			}
-			if (
-				changeDetails.oldDescription !== undefined &&
-				changeDetails.newDescription !== undefined
-			) {
-				const oldDesc = changeDetails.oldDescription || '(empty)'
-				const newDesc = changeDetails.newDescription || '(empty)'
-				changes.push(`description from "${oldDesc}" to "${newDesc}"`)
-			}
-			if (
-				changeDetails.oldStatus !== undefined &&
-				changeDetails.newStatus !== undefined
-			) {
-				changes.push(
-					`status from "${changeDetails.oldStatus}" to "${changeDetails.newStatus}"`
-				)
-			}
-			if (
-				changeDetails.oldFieldTitle !== undefined &&
-				changeDetails.newFieldTitle !== undefined
-			) {
-				changes.push(
-					`field title from "${changeDetails.oldFieldTitle}" to "${changeDetails.newFieldTitle}"`
-				)
-			}
-			if (
-				changeDetails.oldFieldRequired !== undefined &&
-				changeDetails.newFieldRequired !== undefined
-			) {
-				changes.push(
-					`required from ${changeDetails.oldFieldRequired} to ${changeDetails.newFieldRequired}`
-				)
-			}
-
-			return changes.length > 0
-				? `Restored ${action}: ${changes.join(', ')}`
-				: `Restored ${action}`
-		}
-	}
-}
-
-function canRestore(editType: EditType): boolean {
-	// Can restore any edit type except form_created, fields_reordered, and restored
-	// These actions cannot be reversed
-	return ![
-		'form_created' as EditType,
-		'fields_reordered' as EditType,
-		'restored' as EditType
-	].includes(editType)
-}
-
-function formatTimestamp(timestamp: number) {
-	const date = new Date(timestamp)
-	const now = new Date()
-	const diffMs = now.getTime() - date.getTime()
-	const diffMins = Math.floor(diffMs / 60000)
-	const diffHours = Math.floor(diffMs / 3600000)
-	const diffDays = Math.floor(diffMs / 86400000)
-
-	if (diffMins < 1) return 'just now'
-	if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`
-	if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
-	if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`
-
-	return date.toLocaleDateString('en-US', {
-		year: 'numeric',
-		month: 'short',
-		day: 'numeric',
-		hour: '2-digit',
-		minute: '2-digit'
+export const Route = createFileRoute('/_platform/forms/$id/timeline')({
+	component: RouteComponent,
+	validateSearch: timelineSearchSchema,
+	head: () => ({
+		meta: seo({
+			title: 'Form Timeline - AI Form Builder',
+			description: 'View the edit history of your form'
+		})
 	})
-}
-
-function getUserDisplay(user: TimelineEntry['user']) {
-	if (!user) {
-		return (
-			<div className="flex items-center gap-2">
-				<div className="bg-muted flex h-6 w-6 items-center justify-center rounded-full text-xs">
-					?
-				</div>
-				<span>Unknown User</span>
-			</div>
-		)
-	}
-
-	const displayName =
-		user.firstName && user.lastName
-			? `${user.firstName} ${user.lastName}`
-			: user.firstName || 'Unknown User'
-
-	const initials =
-		user.firstName && user.lastName
-			? `${user.firstName[0]}${user.lastName[0]}`
-			: user.firstName
-				? user.firstName[0]
-				: '?'
-
-	return (
-		<div className="flex items-center gap-1">
-			{user.avatarUrl ? (
-				<img
-					alt={displayName}
-					className="h-6 w-6 rounded-full object-cover"
-					src={user.avatarUrl}
-				/>
-			) : (
-				<div className="bg-primary text-primary-foreground flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium">
-					{initials}
-				</div>
-			)}
-			<span>{displayName}</span>
-		</div>
-	)
-}
+})
 
 function RouteComponent() {
 	const { id: formId } = Route.useParams()
+	const search = Route.useSearch()
+	const navigate = Route.useNavigate()
 	const { organization } = useOrganization()
 	const { user } = useUser()
+	const [cursorStack, setCursorStack] = useState<(string | null)[]>([])
 
 	const businessId = organization?.id ?? user?.id
-
-	const [cursor, setCursor] = React.useState<string | null>(null)
-	const [cursorStack, setCursorStack] = React.useState<(string | null)[]>([])
-
-	const queryClient = useQueryClient()
 
 	const { data, isLoading } = useQuery(
 		convexQuery(
@@ -312,7 +44,7 @@ function RouteComponent() {
 				? {
 						formId: formId as Id<'form'>,
 						businessId,
-						paginationOpts: { numItems: 20, cursor }
+						paginationOpts: { numItems: 20, cursor: search.cursor }
 					}
 				: 'skip'
 		)
@@ -322,15 +54,6 @@ function RouteComponent() {
 		mutationFn: useConvexMutation(api.formEditHistory.restore),
 		onSuccess: () => {
 			toast.success('Successfully restored to previous state')
-			queryClient.invalidateQueries({
-				queryKey: ['convexQuery', api.formEditHistory.list]
-			})
-			queryClient.invalidateQueries({
-				queryKey: ['convexQuery', api.form.get]
-			})
-			queryClient.invalidateQueries({
-				queryKey: ['convexQuery', api.formField.list]
-			})
 		},
 		onError: (error: Error) => {
 			toast.error(error.message || 'Failed to restore')
@@ -339,17 +62,31 @@ function RouteComponent() {
 
 	function handleNext() {
 		if (!data?.continueCursor || data.isDone) return
-		setCursorStack((s) => [...s, cursor])
-		setCursor(data.continueCursor)
+		// Push current cursor to stack before moving forward
+		setCursorStack((prev) => [...prev, search.cursor])
+		navigate({
+			search: { cursor: data.continueCursor }
+		})
 	}
 
 	function handlePrev() {
-		setCursorStack((s) => {
-			if (s.length === 0) return s
-			const copy = [...s]
-			const previous = copy.pop() as string | null
-			setCursor(previous)
-			return copy
+		// Pop the last cursor from the stack to go back one page
+		setCursorStack((prev) => {
+			if (prev.length === 0) return prev
+			const newStack = [...prev]
+			const previousCursor = newStack.pop() as string | null
+			navigate({
+				search: { cursor: previousCursor }
+			})
+			return newStack
+		})
+	}
+
+	function handleRestore(historyId: Id<'formEditHistory'>) {
+		if (!businessId) return
+		restoreMutation.mutate({
+			historyId,
+			businessId
 		})
 	}
 
@@ -364,104 +101,56 @@ function RouteComponent() {
 	const entries = data?.page ?? []
 
 	return (
-		<div className="container mx-auto max-w-4xl py-8">
-			<div className="mb-8">
-				<h1 className="text-3xl font-bold">Edit Timeline</h1>
-				<p className="text-muted-foreground mt-2">
-					View the complete history of changes made to this form
-				</p>
-			</div>
+		<div className="h-full overflow-auto">
+			<div className="mx-auto max-w-4xl p-6 space-y-8">
+				<div>
+					<h1 className="text-2xl font-semibold text-gray-900">
+						Edit Timeline
+					</h1>
+					<p className="text-sm text-gray-500 mt-1">
+						View the complete history of changes made to this form
+					</p>
+				</div>
 
-			<div className="space-y-6">
-				{entries.length === 0 ? (
-					<div className="bg-muted/50 rounded-lg border border-dashed p-12 text-center">
-						<Calendar className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
-						<h3 className="mb-2 text-lg font-semibold">No edits yet</h3>
-						<p className="text-muted-foreground text-sm">
-							Changes to this form will appear here
-						</p>
-					</div>
-				) : (
-					<div className="relative">
-						{/* Timeline entries */}
-						<div className="space-y-8">
-							{entries.map((entry, index) => {
-								const Icon = getEditIcon(entry.editType)
-								const isLast = index === entries.length - 1
-								return (
-									<div className="relative flex gap-4" key={entry._id}>
-										{/* Vertical line connecting to next item (not shown for last item) */}
-										{!isLast && (
-											<div className="bg-border absolute left-6 top-12 h-[calc(100%+2rem)] w-px" />
-										)}
-
-										{/* Icon */}
-										<div className="bg-background border-border relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2">
-											<Icon className="text-muted-foreground h-5 w-5" />
-										</div>
-
-										{/* Content */}
-										<div className="flex-1 pb-8">
-											<div className="bg-card rounded-lg border p-4">
-												<div className="flex items-start justify-between gap-4">
-													<div className="flex-1">
-														<div className="mb-1 flex items-start justify-between">
-															<p className="font-medium text-base">
-																{getEditDescription(entry)}
-															</p>
-															<span className="text-muted-foreground ml-4 shrink-0 text-xs">
-																{formatTimestamp(entry._creationTime)}
-															</span>
-														</div>
-														<div className="flex items-center justify-between">
-															<div className="text-muted-foreground flex items-center gap-1 text-sm">
-																{getUserDisplay(entry.user)}
-															</div>
-															{canRestore(entry.editType) && (
-																<Button
-																	className="h-7 text-xs"
-																	disabled={restoreMutation.isPending}
-																	onClick={() => {
-																		if (!businessId) return
-																		restoreMutation.mutate({
-																			historyId: entry._id,
-																			businessId
-																		})
-																	}}
-																	size="sm"
-																	variant="outline"
-																>
-																	<RotateCcw className="mr-1 h-3 w-3" />
-																	Restore
-																</Button>
-															)}
-														</div>
-													</div>
-												</div>
-											</div>
-										</div>
-									</div>
-								)
-							})}
+				<div className="space-y-6">
+					{entries.length === 0 ? (
+						<div className="bg-muted/50 rounded-lg border border-dashed p-12 text-center">
+							<Calendar className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
+							<h3 className="mb-2 text-lg font-semibold">No edits yet</h3>
+							<p className="text-muted-foreground text-sm">
+								Changes to this form will appear here
+							</p>
 						</div>
-					</div>
-				)}
+					) : (
+						<div className="relative">
+							{/* Timeline entries */}
+							<div className="space-y-8">
+								{entries.map((entry, index) => {
+									const isLast = index === entries.length - 1
+									return (
+										<TimelineEntryCard
+											entry={entry}
+											isLast={isLast}
+											isRestoring={restoreMutation.isPending}
+											key={entry._id}
+											onRestore={handleRestore}
+										/>
+									)
+								})}
+							</div>
+						</div>
+					)}
 
-				{/* Load more button */}
-				{data && !data.isDone && (
-					<div className="flex justify-center gap-2 pt-4">
-						<Button
-							disabled={cursorStack.length === 0}
-							onClick={handlePrev}
-							variant="outline"
-						>
-							Previous
-						</Button>
-						<Button onClick={handleNext} variant="outline">
-							Next
-						</Button>
-					</div>
-				)}
+					{(search.cursor !== null || (data && !data.isDone)) && (
+						<Pagination
+							className="flex justify-center gap-2 pt-4"
+							hasNext={!data?.isDone}
+							hasPrevious={cursorStack.length > 0}
+							onNext={handleNext}
+							onPrevious={handlePrev}
+						/>
+					)}
+				</div>
 			</div>
 		</div>
 	)

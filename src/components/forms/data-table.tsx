@@ -17,12 +17,12 @@ import {
 	FormMenuItems
 } from '~/components/forms/columns'
 import { ShareFormDialog } from '~/components/forms/share-form-dialog'
-import { Button } from '~/components/ui/button'
 import {
 	ContextMenu,
 	ContextMenuContent,
 	ContextMenuTrigger
 } from '~/components/ui/context-menu'
+import { Pagination } from '~/components/ui/pagination'
 import {
 	Table,
 	TableBody,
@@ -197,25 +197,14 @@ export function DataTable<TData, TValue>({
 					</TableBody>
 				</Table>
 			</div>
-			<div className="flex items-center justify-end space-x-2 py-4">
-				<div className="space-x-2">
-					<Button
-						disabled={!hasPrev}
-						onClick={() => onPrev?.()}
-						size="sm"
-						variant="outline"
-					>
-						Previous
-					</Button>
-					<Button
-						disabled={!hasNext}
-						onClick={() => onNext?.()}
-						size="sm"
-						variant="outline"
-					>
-						Next
-					</Button>
-				</div>
+			<div className="flex items-center justify-end py-4">
+				<Pagination
+					className="flex items-center gap-2"
+					hasNext={!!hasNext}
+					hasPrevious={!!hasPrev}
+					onNext={() => onNext?.()}
+					onPrevious={() => onPrev?.()}
+				/>
 			</div>
 		</div>
 	)

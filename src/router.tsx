@@ -36,7 +36,11 @@ export function getRouter() {
 	const router = createRouter({
 		routeTree,
 		defaultPreload: 'intent',
-		context: { queryClient, convex: convexQueryClient.convexClient },
+		context: {
+			queryClient,
+			convex: convexQueryClient.convexClient,
+			convexQueryClient
+		},
 		scrollRestoration: true
 	})
 	setupRouterSsrQueryIntegration({

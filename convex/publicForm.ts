@@ -1,4 +1,5 @@
 import { v } from 'convex/values'
+import { internal } from './_generated/api'
 import { mutation, query } from './_generated/server'
 import { notFound } from './error'
 
@@ -11,6 +12,7 @@ export const getPublicForm = query({
 			_id: v.id('form'),
 			title: v.string(),
 			description: v.optional(v.string()),
+			successMessage: v.optional(v.string()),
 			status: v.union(
 				v.literal('draft'),
 				v.literal('published'),
@@ -31,6 +33,7 @@ export const getPublicForm = query({
 			_id: form._id,
 			title: form.title,
 			description: form.description,
+			successMessage: form.successMessage,
 			status: form.status
 		}
 	}
@@ -109,6 +112,109 @@ export const submitForm = mutation({
 		await ctx.db.patch(args.formId, {
 			submissionCount: form.submissionCount + 1
 		})
+
+		// Get enabled notification emails
+		const notifications = await ctx.db
+			.query('formNotification')
+			.withIndex('byFormId', (q) => q.eq('formId', args.formId))
+			.filter((q) => q.eq(q.field('enabled'), true))
+			.collect()
+
+		// If there are notifications enabled, prepare and send emails
+		if (notifications.length > 0) {
+			// Get form fields to format the submission data
+			const fields = await ctx.db
+				.query('formField')
+				.withIndex('byFormId', (q) => q.eq('formId', args.formId))
+				.collect()
+
+			// Format the submission data for the email
+			const formattedFields = fields
+				.sort((a, b) => a.order - b.order)
+				.map((field) => {
+					const value = args.data[field._id]
+					let formattedValue: string | string[]
+
+					if (Array.isArray(value)) {
+						formattedValue = value
+					} else if (value !== undefined && value !== null) {
+						formattedValue = String(value)
+					} else {
+						formattedValue = ''
+					}
+
+					return {
+						title: field.title,
+						type: field.type,
+						value: formattedValue
+					}
+				})
+
+			// Schedule the email notification action
+			await ctx.scheduler.runAfter(
+				0,
+				internal.email.sendSubmissionNotifications,
+				{
+					formId: args.formId,
+					submissionId,
+					formTitle: form.title,
+					submittedAt: Date.now(),
+					fields: formattedFields,
+					recipientEmails: notifications.map((n) => n.email)
+				}
+			)
+		}
+
+		// Get enabled webhooks (both form-specific and global)
+		const webhooks = await ctx.db
+			.query('webhook')
+			.withIndex('byBusinessId', (q) => q.eq('businessId', form.businessId))
+			.filter((q) => q.eq(q.field('enabled'), true))
+			.collect()
+
+		// Filter webhooks that apply to this form (formId matches or is null for global webhooks)
+		const applicableWebhooks = webhooks.filter(
+			(webhook) =>
+				webhook.formId === undefined || webhook.formId === args.formId
+		)
+
+		if (applicableWebhooks.length > 0) {
+			// Get form fields to include in webhook payload
+			const fields = await ctx.db
+				.query('formField')
+				.withIndex('byFormId', (q) => q.eq('formId', args.formId))
+				.collect()
+
+			const formattedFields = fields
+				.sort((a, b) => a.order - b.order)
+				.map((field) => ({
+					id: field._id,
+					title: field.title,
+					type: field.type,
+					value: args.data[field._id]
+				}))
+
+			// Schedule webhook triggers
+			for (const webhook of applicableWebhooks) {
+				await ctx.scheduler.runAfter(0, internal.webhook.triggerWebhook, {
+					webhookId: webhook._id,
+					payload: {
+						event: 'submission.created',
+						timestamp: Date.now(),
+						form: {
+							id: form._id,
+							title: form.title,
+							description: form.description
+						},
+						submission: {
+							id: submissionId,
+							submittedAt: Date.now(),
+							fields: formattedFields
+						}
+					}
+				})
+			}
+		}
 
 		return submissionId
 	}

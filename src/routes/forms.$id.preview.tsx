@@ -1,35 +1,46 @@
 import { useOrganization, useUser } from '@clerk/tanstack-react-start'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import {
+	queryOptions,
+	useMutation,
+	useSuspenseQuery
+} from '@tanstack/react-query'
 import {
 	createFileRoute,
 	Link,
+	notFound,
 	redirect,
 	useNavigate
 } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
-import { Calendar, Edit, Eye, Loader2, Send, Share2, X } from 'lucide-react'
+import { Edit, Eye, Send, Share2, X } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { FormRenderer } from '~/components/forms/form-renderer'
 import { ShareFormDialog } from '~/components/forms/share-form-dialog'
 import { Button } from '~/components/ui/button'
-import { Checkbox } from '~/components/ui/checkbox'
-import { Input } from '~/components/ui/input'
-import { Label } from '~/components/ui/label'
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue
-} from '~/components/ui/select'
 import { Separator } from '~/components/ui/separator'
-import { Textarea } from '~/components/ui/textarea'
+import { seo } from '~/lib/seo'
+
+const formQueryOptions = (formId: Id<'form'>, businessId: string) =>
+	queryOptions(
+		convexQuery(api.form.get, {
+			formId,
+			businessId
+		})
+	)
+
+const fieldsQueryOptions = (formId: Id<'form'>, businessId: string) =>
+	queryOptions(
+		convexQuery(api.formField.list, {
+			formId,
+			businessId
+		})
+	)
 
 export const Route = createFileRoute('/forms/$id/preview')({
-	component: RouteComponent,
-	beforeLoad({ context }) {
+	loader: async ({ context, params }) => {
 		if (!context.auth.userId) {
 			throw redirect({
 				to: '/sign-in/$',
@@ -38,18 +49,45 @@ export const Route = createFileRoute('/forms/$id/preview')({
 				}
 			})
 		}
-	}
+
+		const formId = params.id as Id<'form'>
+		const businessId = context.auth.org.id ?? (context.auth.userId as string)
+
+		const [form] = await Promise.all([
+			context.queryClient.ensureQueryData(formQueryOptions(formId, businessId)),
+			context.queryClient.ensureQueryData(
+				fieldsQueryOptions(formId, businessId)
+			)
+		])
+
+		if (!form) {
+			throw notFound()
+		}
+
+		return { form }
+	},
+	component: RouteComponent,
+	head: ({ loaderData }) => ({
+		meta: loaderData
+			? seo({
+					title: `${loaderData.form.title} - Preview`,
+					description: loaderData.form.description || 'Preview your form'
+				})
+			: undefined
+	})
 })
 
 function RouteComponent() {
 	const { id: formId } = Route.useParams()
 	const navigate = useNavigate()
 	const { user } = useUser()
-	const { organization, isLoaded } = useOrganization()
+	const { organization } = useOrganization()
 	const [formData, setFormData] = useState<Record<string, string | string[]>>(
 		{}
 	)
 	const [shareDialogOpen, setShareDialogOpen] = useState(false)
+
+	const businessId = organization?.id ?? (user?.id as string)
 
 	const updateStatusMutation = useMutation({
 		mutationFn: useConvexMutation(api.form.updateStatus),
@@ -61,34 +99,17 @@ function RouteComponent() {
 		}
 	})
 
-	const { data: form, isLoading: isFormLoading } = useQuery(
-		convexQuery(
-			api.form.get,
-			isLoaded
-				? {
-						formId: formId as Id<'form'>,
-						businessId: organization?.id ?? (user?.id as string)
-					}
-				: 'skip'
-		)
+	const { data: form } = useSuspenseQuery(
+		formQueryOptions(formId as Id<'form'>, businessId)
 	)
 
-	const { data: fields, isLoading: isFieldsLoading } = useQuery(
-		convexQuery(
-			api.formField.list,
-			isLoaded
-				? {
-						formId: formId as Id<'form'>,
-						businessId: organization?.id ?? (user?.id as string)
-					}
-				: 'skip'
-		)
+	const { data: fields } = useSuspenseQuery(
+		fieldsQueryOptions(formId as Id<'form'>, businessId)
 	)
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault()
 
-		// Validate required fields
 		const missingFields = fields?.filter(
 			(field) => field.required && !formData[field._id]
 		)
@@ -100,8 +121,6 @@ function RouteComponent() {
 			return
 		}
 
-		console.log('Form submitted:', formData)
-		// TODO: Implement form submission
 		toast.success('Form submitted successfully!')
 		setFormData({})
 	}
@@ -113,32 +132,8 @@ function RouteComponent() {
 		}))
 	}
 
-	const handleCheckboxChange = (
-		fieldId: string,
-		option: string,
-		checked: boolean
-	) => {
-		setFormData((prev) => {
-			const currentValues = (prev[fieldId] as string[]) || []
-			if (checked) {
-				return {
-					...prev,
-					[fieldId]: [...currentValues, option]
-				}
-			}
-			return {
-				...prev,
-				[fieldId]: currentValues.filter((v) => v !== option)
-			}
-		})
-	}
-
-	if (isFormLoading || isFieldsLoading || !isLoaded) {
-		return (
-			<div className="flex h-screen items-center justify-center">
-				<Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-			</div>
-		)
+	const handleClear = () => {
+		setFormData({})
 	}
 
 	if (!form) {
@@ -175,7 +170,6 @@ function RouteComponent() {
 			{/* Figma-style Header */}
 			<header className="bg-background sticky top-0 z-50 border-b border-gray-200">
 				<div className="flex h-14 items-center justify-between px-4">
-					{/* Left Section */}
 					<div className="flex items-center gap-3">
 						<Button
 							onClick={() =>
@@ -186,20 +180,19 @@ function RouteComponent() {
 						>
 							<X className="h-4 w-4" />
 						</Button>
-						<Separator className="h-6" orientation="vertical" />
+						<Separator className="h-6!" orientation="vertical" />
 						<div className="flex items-center gap-2">
 							<Eye className="h-4 w-4 text-gray-500" />
 							<span className="text-sm font-medium text-gray-700">
 								Preview Mode
 							</span>
 						</div>
-						<Separator className="h-6" orientation="vertical" />
+						<Separator className="h-6!" orientation="vertical" />
 						<span className="text-sm text-gray-600 max-w-[200px] truncate">
 							{form.title}
 						</span>
 					</div>
 
-					{/* Right Section */}
 					<div className="flex items-center gap-2">
 						<Button onClick={handleShare} size="sm" variant="ghost">
 							<Share2 className="mr-2 h-4 w-4" />
@@ -227,159 +220,15 @@ function RouteComponent() {
 				</div>
 			</header>
 
-			<div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
-				{/* Form Header */}
-				<div className="mb-8 rounded-lg border border-gray-200 bg-white p-8 shadow-sm">
-					<h1 className="text-3xl font-bold text-gray-900">{form.title}</h1>
-					{form.description && (
-						<p className="text-muted-foreground mt-2 text-lg">
-							{form.description}
-						</p>
-					)}
-					<div className="mt-4 flex items-center gap-2">
-						<span className="text-destructive text-sm">* Required fields</span>
-					</div>
-				</div>
-
-				{/* Form Fields */}
-				<form className="space-y-6" onSubmit={handleSubmit}>
-					{sortedFields.map((field) => (
-						<div
-							className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
-							key={field._id}
-						>
-							<Label className="mb-3 block text-base font-medium text-gray-900">
-								{field.title}
-								{field.required && (
-									<span className="text-destructive ml-1">*</span>
-								)}
-							</Label>
-
-							{field.type === 'singleline' && (
-								<Input
-									className="text-base"
-									onChange={(e) => handleFieldChange(field._id, e.target.value)}
-									placeholder={field.placeholder || 'Your answer'}
-									required={field.required}
-									value={(formData[field._id] as string) || ''}
-								/>
-							)}
-
-							{field.type === 'multiline' && (
-								<Textarea
-									className="min-h-[120px] resize-y text-base"
-									onChange={(e) => handleFieldChange(field._id, e.target.value)}
-									placeholder={field.placeholder || 'Your answer'}
-									required={field.required}
-									rows={4}
-									value={(formData[field._id] as string) || ''}
-								/>
-							)}
-
-							{field.type === 'number' && (
-								<Input
-									className="text-base"
-									onChange={(e) => handleFieldChange(field._id, e.target.value)}
-									placeholder={field.placeholder || '0'}
-									required={field.required}
-									type="number"
-									value={(formData[field._id] as string) || ''}
-								/>
-							)}
-
-							{field.type === 'select' && (
-								<Select
-									onValueChange={(value) => handleFieldChange(field._id, value)}
-									required={field.required}
-									value={(formData[field._id] as string) || ''}
-								>
-									<SelectTrigger className="text-base">
-										<SelectValue placeholder="Select an option" />
-									</SelectTrigger>
-									<SelectContent>
-										{field.options?.map((option) => (
-											<SelectItem key={option} value={option}>
-												{option}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							)}
-
-							{field.type === 'checkbox' && (
-								<div className="space-y-3">
-									{field.options?.map((option) => (
-										<div className="flex items-center space-x-2" key={option}>
-											<Checkbox
-												checked={(
-													(formData[field._id] as string[]) || []
-												).includes(option)}
-												id={`${field._id}-${option}`}
-												onCheckedChange={(checked) =>
-													handleCheckboxChange(field._id, option, !!checked)
-												}
-											/>
-											<label
-												className="text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-												htmlFor={`${field._id}-${option}`}
-											>
-												{option}
-											</label>
-										</div>
-									))}
-								</div>
-							)}
-
-							{field.type === 'date' && (
-								<div className="relative">
-									<Input
-										className="text-base"
-										onChange={(e) =>
-											handleFieldChange(field._id, e.target.value)
-										}
-										required={field.required}
-										type="date"
-										value={(formData[field._id] as string) || ''}
-									/>
-									<Calendar className="text-muted-foreground pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2" />
-								</div>
-							)}
-						</div>
-					))}
-
-					{/* Submit Buttons - Only show if there are fields */}
-					{sortedFields.length > 0 && (
-						<div className="flex justify-between pt-4">
-							<Button
-								className="px-8 py-6 text-base"
-								size="lg"
-								type="submit"
-								variant="default"
-							>
-								Submit
-							</Button>
-							<Button
-								className="px-8 py-6 text-base"
-								onClick={() => setFormData({})}
-								size="lg"
-								type="button"
-								variant="outline"
-							>
-								Clear form
-							</Button>
-						</div>
-					)}
-				</form>
-
-				{/* Empty State */}
-				{sortedFields.length === 0 && (
-					<div className="rounded-lg border border-gray-200 bg-white p-12 text-center shadow-sm">
-						<p className="text-muted-foreground text-lg">
-							This form doesn't have any fields yet.
-						</p>
-					</div>
-				)}
-			</div>
+			<FormRenderer
+				fields={sortedFields}
+				form={form}
+				formData={formData}
+				onClear={handleClear}
+				onFieldChange={handleFieldChange}
+				onSubmit={handleSubmit}
+				submitButtonText="Submit"
+			/>
 
 			{/* Share Dialog */}
 			<ShareFormDialog

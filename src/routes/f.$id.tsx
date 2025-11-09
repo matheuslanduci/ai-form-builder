@@ -1,14 +1,18 @@
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
-import { queryOptions, useMutation, useQuery } from '@tanstack/react-query'
+import {
+	queryOptions,
+	useMutation,
+	useSuspenseQuery
+} from '@tanstack/react-query'
 import { createFileRoute, notFound } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
 import { useState } from 'react'
 import { toast } from 'sonner'
-import { FormField } from '../components/form-fields/form-field'
-import { Button } from '../components/ui/button'
+import { seo } from '~/lib/seo'
+import { FormRenderer } from '../components/forms/form-renderer'
+import { FormSuccess } from '../components/forms/form-success'
 
-// Query options for SSR
 const formQueryOptions = (formId: Id<'form'>) =>
 	queryOptions(
 		convexQuery(api.publicForm.getPublicForm, {
@@ -27,28 +31,36 @@ export const Route = createFileRoute('/f/$id')({
 	loader: async ({ context, params }) => {
 		const formId = params.id as Id<'form'>
 
-		// Prefetch both queries
 		const [form] = await Promise.all([
 			context.queryClient.ensureQueryData(formQueryOptions(formId)),
 			context.queryClient.ensureQueryData(fieldsQueryOptions(formId))
 		])
 
-		// If form is null (not found or not published), throw notFound
 		if (!form) {
 			throw notFound()
 		}
+
+		return { form }
 	},
-	component: PublicFormPage
+	component: RouteComponent,
+	head: ({ loaderData }) => ({
+		meta: loaderData
+			? seo({
+					title: loaderData.form.title,
+					description: loaderData.form.description || 'Fill out this form'
+				})
+			: undefined
+	})
 })
 
-function PublicFormPage() {
+function RouteComponent() {
 	const { id } = Route.useParams()
 	const formId = id as Id<'form'>
 
-	const { data: form, isLoading: isFormLoading } = useQuery(
+	const { data: form, isLoading: isFormLoading } = useSuspenseQuery(
 		formQueryOptions(formId)
 	)
-	const { data: fields = [], isLoading: isFieldsLoading } = useQuery(
+	const { data: fields = [], isLoading: isFieldsLoading } = useSuspenseQuery(
 		fieldsQueryOptions(formId)
 	)
 
@@ -56,16 +68,14 @@ function PublicFormPage() {
 		{}
 	)
 	const [errors, setErrors] = useState<Record<string, string>>({})
+	const [isSubmitted, setIsSubmitted] = useState(false)
 
 	const submitFormFn = useConvexMutation(api.publicForm.submitForm)
 
 	const submitMutation = useMutation({
 		mutationFn: submitFormFn,
 		onSuccess: () => {
-			toast.success('Form submitted successfully!')
-			// Reset form
-			setFormData({})
-			setErrors({})
+			setIsSubmitted(true)
 		},
 		onError: (error) => {
 			toast.error('Failed to submit form')
@@ -86,6 +96,11 @@ function PublicFormPage() {
 				return newErrors
 			})
 		}
+	}
+
+	const handleClear = () => {
+		setFormData({})
+		setErrors({})
 	}
 
 	const handleSubmit = (e: React.FormEvent) => {
@@ -143,76 +158,29 @@ function PublicFormPage() {
 		)
 	}
 
+	// Show success page after submission
+	if (isSubmitted) {
+		return (
+			<FormSuccess
+				formTitle={form.title}
+				successMessage={form.successMessage}
+			/>
+		)
+	}
+
 	return (
 		<div className="min-h-screen bg-gray-50">
-			<div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
-				{/* Form Header */}
-				<div className="mb-8 rounded-lg border border-gray-200 bg-white p-8 shadow-sm">
-					<h1 className="text-3xl font-bold text-gray-900">{form.title}</h1>
-					{form.description && (
-						<p className="text-muted-foreground mt-2 text-lg">
-							{form.description}
-						</p>
-					)}
-					<div className="mt-4 flex items-center gap-2">
-						<span className="text-destructive text-sm">* Required fields</span>
-					</div>
-				</div>
-
-				{/* Form Fields */}
-				{fields.length === 0 ? (
-					<div className="rounded-lg border border-gray-200 bg-white p-12 text-center shadow-sm">
-						<p className="text-muted-foreground text-lg">
-							This form doesn't have any fields yet.
-						</p>
-					</div>
-				) : (
-					<form className="space-y-6" onSubmit={handleSubmit}>
-						{fields.map((field) => (
-							<div
-								className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
-								key={field._id}
-							>
-								<FormField
-									error={errors[field._id]}
-									field={field}
-									onChange={(value: string | string[]) =>
-										handleFieldChange(field._id, value)
-									}
-									value={
-										formData[field._id] || (field.type === 'checkbox' ? [] : '')
-									}
-								/>
-							</div>
-						))}
-
-						{/* Submit Buttons */}
-						<div className="flex justify-between pt-4">
-							<Button
-								className="px-8 py-6 text-base"
-								disabled={submitMutation.isPending}
-								size="lg"
-								type="submit"
-							>
-								{submitMutation.isPending ? 'Submitting...' : 'Submit'}
-							</Button>
-							<Button
-								className="px-8 py-6 text-base"
-								disabled={submitMutation.isPending}
-								onClick={() => {
-									setFormData({})
-									setErrors({})
-								}}
-								size="lg"
-								type="button"
-								variant="outline"
-							>
-								Clear form
-							</Button>
-						</div>
-					</form>
-				)}
-			</div>
+			<FormRenderer
+				errors={errors}
+				fields={fields}
+				form={form}
+				formData={formData}
+				isSubmitting={submitMutation.isPending}
+				onClear={handleClear}
+				onFieldChange={handleFieldChange}
+				onSubmit={handleSubmit}
+				submitButtonText="Submit"
+			/>
 		</div>
 	)
 }

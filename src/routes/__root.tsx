@@ -1,4 +1,5 @@
 import { ClerkProvider, useAuth } from '@clerk/tanstack-react-start'
+import type { ConvexQueryClient } from '@convex-dev/react-query'
 import type { QueryClient } from '@tanstack/react-query'
 import {
 	createRootRouteWithContext,
@@ -16,10 +17,15 @@ import appCss from '../styles.css?url'
 
 export const Route = createRootRouteWithContext<{
 	convex: ConvexReactClient
+	convexQueryClient: ConvexQueryClient
 	queryClient: QueryClient
 }>()({
-	beforeLoad: async () => {
+	beforeLoad: async ({ context }) => {
 		const data = await getAuth()
+
+		if (data.token) {
+			context.convexQueryClient.serverHttpClient?.setAuth(data.token)
+		}
 
 		return { auth: data }
 	},

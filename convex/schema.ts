@@ -31,6 +31,7 @@ export default defineSchema({
 		businessId: v.string(),
 		title: v.string(),
 		description: v.optional(v.string()),
+		successMessage: v.optional(v.string()),
 		submissionCount: v.number(),
 		lastUpdatedAt: v.optional(v.number()),
 		status: v.union(
@@ -140,5 +141,38 @@ export default defineSchema({
 		formId: v.id('form'),
 		submittedAt: v.number(),
 		data: v.any() // Dynamic object containing field IDs as keys and their values
-	}).index('byFormId', ['formId'])
+	}).index('byFormId', ['formId']),
+	formNotification: defineTable({
+		formId: v.id('form'),
+		businessId: v.string(),
+		email: v.string(),
+		enabled: v.boolean()
+	})
+		.index('byFormId', ['formId'])
+		.index('byBusinessId', ['businessId']),
+	webhook: defineTable({
+		businessId: v.string(),
+		formId: v.optional(v.id('form')),
+		url: v.string(),
+		secret: v.string(),
+		event: v.literal('submission.created'),
+		enabled: v.boolean(),
+		lastTriggeredAt: v.optional(v.number()),
+		lastStatus: v.optional(v.union(v.literal('success'), v.literal('failed')))
+	})
+		.index('byBusinessId', ['businessId'])
+		.index('byFormId', ['formId']),
+	webhookEntry: defineTable({
+		webhookId: v.id('webhook'),
+		businessId: v.string(),
+		event: v.literal('submission.created'),
+		triggeredAt: v.number(),
+		status: v.union(v.literal('success'), v.literal('failed')),
+		statusCode: v.optional(v.number()),
+		responseBody: v.optional(v.string()),
+		errorMessage: v.optional(v.string()),
+		payload: v.any() // The webhook payload that was sent
+	})
+		.index('byWebhookId', ['webhookId'])
+		.index('byBusinessId', ['businessId'])
 })

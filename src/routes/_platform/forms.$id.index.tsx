@@ -6,403 +6,41 @@ import {
 	DragOverlay,
 	type DragStartEvent,
 	PointerSensor,
-	useDraggable,
-	useDroppable,
 	useSensor,
 	useSensors
 } from '@dnd-kit/core'
 import {
 	arrayMove,
 	SortableContext,
-	useSortable,
 	verticalListSortingStrategy
 } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
-import {
-	AlignLeft,
-	ArrowUp,
-	Calendar,
-	CheckSquare,
-	Copy,
-	GripVertical,
-	Hash,
-	ListPlus,
-	Paperclip,
-	Plus,
-	Sparkles,
-	Star,
-	Trash2,
-	Type,
-	Undo2,
-	X
-} from 'lucide-react'
+import { ListPlus, Sparkles } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { AIAssistantPanel } from '~/components/form-builder/ai-assistant-panel'
+import { DragOverlayContent } from '~/components/form-builder/drag-overlay-content'
+import { DroppableFormArea } from '~/components/form-builder/droppable-form-area'
+import { FieldsSidebarPanel } from '~/components/form-builder/fields-sidebar-panel'
+import { SortableFormField } from '~/components/form-builder/sortable-form-field'
+import type { ChatMessage, FormField } from '~/components/form-builder/types'
 import { Button } from '~/components/ui/button'
-import { Checkbox } from '~/components/ui/checkbox'
 import { Input } from '~/components/ui/input'
-import {
-	InputGroup,
-	InputGroupAddon,
-	InputGroupButton,
-	InputGroupText,
-	InputGroupTextarea
-} from '~/components/ui/input-group'
-import { Separator } from '~/components/ui/separator'
 import { Textarea } from '~/components/ui/textarea'
-import { Toggle } from '~/components/ui/toggle'
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger
-} from '~/components/ui/tooltip'
-import { cn } from '~/lib/utils'
-
-type FormField = {
-	_id: Id<'formField'>
-	formId: Id<'form'>
-	pageId?: string
-	type: 'singleline' | 'multiline' | 'number' | 'select' | 'checkbox' | 'date'
-	title: string
-	placeholder?: string
-	required: boolean
-	order: number
-	options?: string[]
-}
+import { seo } from '~/lib/seo'
 
 export const Route = createFileRoute('/_platform/forms/$id/')({
-	component: RouteComponent
+	component: RouteComponent,
+	head: () => ({
+		meta: seo({
+			title: 'Form Builder - AI Form Builder',
+			description: 'Build and edit your form with AI assistance'
+		})
+	})
 })
-
-function DraggableFieldButton({
-	id,
-	onClick,
-	icon: Icon,
-	title,
-	description
-}: {
-	id: string
-	onClick: () => void
-	icon: React.ElementType
-	title: string
-	description: string
-}) {
-	const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-		id
-	})
-
-	return (
-		<button
-			className="w-full flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-colors text-left"
-			onClick={onClick}
-			ref={setNodeRef}
-			type="button"
-			{...listeners}
-			{...attributes}
-			style={{
-				opacity: isDragging ? 0.5 : 1
-			}}
-		>
-			<div className="flex items-center justify-center w-10 h-10 rounded-lg bg-gray-100">
-				<Icon className="h-5 w-5 text-gray-600" />
-			</div>
-			<div className="flex-1">
-				<div className="font-medium text-sm">{title}</div>
-				<div className="text-xs text-gray-500">{description}</div>
-			</div>
-			<GripVertical className="h-5 w-5 text-gray-400" />
-		</button>
-	)
-}
-
-function DroppableFormArea({ children }: { children: React.ReactNode }) {
-	const { setNodeRef } = useDroppable({
-		id: 'form-drop-zone'
-	})
-
-	return (
-		<div className="space-y-4 min-h-[calc(100vh-300px)] pb-24" ref={setNodeRef}>
-			{children}
-		</div>
-	)
-}
-
-function SortableFormField({
-	field,
-	onRemove,
-	onToggleRequired,
-	onDuplicate,
-	onUpdateTitle,
-	onUpdateOptions
-}: {
-	field: FormField
-	onRemove: () => void
-	onToggleRequired: () => void
-	onDuplicate: () => void
-	onUpdateTitle: (title: string) => void
-	onUpdateOptions: (options: string[]) => void
-}) {
-	const [localOptions, setLocalOptions] = useState<string[]>(
-		field.options || ['Option 1']
-	)
-
-	const {
-		attributes,
-		listeners,
-		setNodeRef,
-		transform,
-		transition,
-		isDragging,
-		isOver
-	} = useSortable({ id: field._id })
-
-	const style = {
-		transform: CSS.Transform.toString(transform),
-		transition,
-		opacity: isDragging ? 0.5 : 1,
-		zIndex: isDragging ? 1 : 0
-	}
-
-	return (
-		<div
-			className="group relative border border-gray-200 rounded-lg pl-3.5 pt-3.5 p-6 hover:border-gray-300 transition-colors bg-white"
-			ref={setNodeRef}
-			style={style}
-		>
-			{isOver && (
-				<div className="absolute inset-0 border-2 border-blue-400 rounded-lg pointer-events-none" />
-			)}
-			<button
-				className="absolute -top-3.5 -left-3.5 h-7 w-7 rounded-md bg-white border border-gray-300 hover:border-gray-400 hover:bg-gray-50 cursor-grab active:cursor-grabbing flex items-center justify-center shadow-sm transition-colors"
-				type="button"
-				{...attributes}
-				{...listeners}
-			>
-				<GripVertical className="h-4 w-4 text-gray-500" />
-			</button>
-			<div className="pl-2">
-				<div className="flex items-center gap-2 mb-2">
-					<Input
-						className="font-medium flex-1 border-0 shadow-none rounded-none border-b border-b-transparent hover:border-b-gray-300 focus:border-b-gray-300 px-0"
-						defaultValue={field.title}
-						onBlur={(e) => onUpdateTitle(e.target.value)}
-						placeholder="Question"
-					/>
-				</div>
-				{field.type === 'singleline' && (
-					<Input
-						className="text-sm text-gray-500"
-						disabled
-						placeholder="Short answer text"
-					/>
-				)}
-				{field.type === 'multiline' && (
-					<Textarea
-						className="text-sm text-gray-500 resize-none"
-						disabled
-						placeholder="Long answer text"
-						rows={3}
-					/>
-				)}
-				{field.type === 'number' && (
-					<Input
-						className="text-sm text-gray-500"
-						disabled
-						placeholder="Number"
-						type='number'
-					/>
-				)}
-				{field.type === 'select' && (
-					<div className="space-y-2">
-						{localOptions.map((option, index) => (
-							<div
-								className="flex items-center gap-2"
-								key={`${option}-${index.toString()}`}
-							>
-								<Input
-									className='text-sm flex-1'
-									defaultValue={option}
-									onBlur={(e) => {
-										const newOptions = [...localOptions]
-										newOptions[index] = e.target.value
-										setLocalOptions(newOptions)
-										onUpdateOptions(newOptions)
-									}}
-									placeholder={`Option ${index + 1}`}
-								/>
-								{localOptions.length > 1 && (
-									<Button
-										className="h-8 w-8 p-0 text-gray-500"
-										onClick={() => {
-											const newOptions = localOptions.filter(
-												(_, i) => i !== index
-											)
-											setLocalOptions(newOptions)
-											onUpdateOptions(newOptions)
-										}}
-										size='icon'
-										type='button'
-										variant='ghost'
-									>
-										<X className='h-4 w-4' />
-									</Button>
-								)}
-							</div>
-						))}
-						<Button
-							className="h-8 text-xs"
-							onClick={() => {
-								const newOptions = [
-									...localOptions,
-									`Option ${localOptions.length + 1}`
-								]
-								setLocalOptions(newOptions)
-								onUpdateOptions(newOptions)
-							}}
-							size='sm'
-							type='button'
-							variant='outline'
-						>
-							<Plus className="h-3 w-3 mr-1" />
-							Add Option
-						</Button>
-					</div>
-				)}
-				{field.type === 'checkbox' && (
-					<div className="space-y-2">
-						{localOptions.map((option, index) => (
-							<div
-								className="flex items-center gap-2"
-								key={`${option}-${index.toString()}`}
-							>
-								<Checkbox className="mt-0.5" disabled />
-								<Input
-									className='text-sm flex-1'
-									defaultValue={option}
-									onBlur={(e) => {
-										const newOptions = [...localOptions]
-										newOptions[index] = e.target.value
-										setLocalOptions(newOptions)
-										onUpdateOptions(newOptions)
-									}}
-									placeholder={`Option ${index + 1}`}
-								/>
-								{localOptions.length > 1 && (
-									<Button
-										className="h-8 w-8 p-0 text-gray-500"
-										onClick={() => {
-											const newOptions = localOptions.filter(
-												(_, i) => i !== index
-											)
-											setLocalOptions(newOptions)
-											onUpdateOptions(newOptions)
-										}}
-										size='icon'
-										type='button'
-										variant='ghost'
-									>
-										<X className='h-4 w-4' />
-									</Button>
-								)}
-							</div>
-						))}
-						<Button
-							className="h-8 text-xs"
-							onClick={() => {
-								const newOptions = [
-									...localOptions,
-									`Option ${localOptions.length + 1}`
-								]
-								setLocalOptions(newOptions)
-								onUpdateOptions(newOptions)
-							}}
-							size='sm'
-							type='button'
-							variant='outline'
-						>
-							<Plus className="h-3 w-3 mr-1" />
-							Add Option
-						</Button>
-					</div>
-				)}
-				{field.type === 'date' && (
-					<Input
-						className="text-sm text-gray-500"
-						disabled
-						placeholder="MM/DD/YYYY"
-						type='date'
-					/>
-				)}
-			</div>
-
-			{/* Toolbar - visible on hover */}
-			<div className="absolute right-4 bottom-4 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-white border border-gray-200 rounded-lg shadow-sm p-1">
-				<TooltipProvider>
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<Button
-								className='h-8 w-8 p-0'
-								onClick={onDuplicate}
-								size='icon'
-								type='button'
-								variant='ghost'
-							>
-								<Copy className="h-4 w-4" />
-							</Button>
-						</TooltipTrigger>
-						<TooltipContent>
-							<p>Duplicate field</p>
-						</TooltipContent>
-					</Tooltip>
-
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<Toggle
-								aria-label="Toggle required"
-								className="h-8 w-8 p-0 border-0 shadow-none"
-								onPressedChange={onToggleRequired}
-								pressed={field.required}
-								size='sm'
-								variant='outline'
-							>
-								<Star
-									className={`h-4 w-4 ${field.required ? 'fill-current' : ''}`}
-								/>
-							</Toggle>
-						</TooltipTrigger>
-						<TooltipContent>
-							<p>{field.required ? 'Optional' : 'Required'}</p>
-						</TooltipContent>
-					</Tooltip>
-
-					<div className="h-4 w-px bg-gray-200 mx-1" />
-
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<Button
-								className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-								onClick={onRemove}
-								size='icon'
-								type='button'
-								variant='ghost'
-							>
-								<Trash2 className="h-4 w-4" />
-							</Button>
-						</TooltipTrigger>
-						<TooltipContent>
-							<p>Delete field</p>
-						</TooltipContent>
-					</Tooltip>
-				</TooltipProvider>
-			</div>
-		</div>
-	)
-}
 
 function RouteComponent() {
 	const { id } = Route.useParams()
@@ -807,7 +445,7 @@ function RouteComponent() {
 								className="text-3xl! shadow-none border-b-transparent! border-b-2! h-auto! font-semibold! border-0 px-0 py-2 rounded-none focus-visible:ring-0 focus-visible:ring-offset-0 focus:border-b-2 focus:border-b-gray-300! placeholder:text-gray-300 bg-transparent"
 								onBlur={handleTitleBlur}
 								onChange={(e) => setTitle(e.target.value)}
-								placeholder='Form Title'
+								placeholder="Form Title"
 								value={title}
 							/>
 							<Textarea
@@ -857,222 +495,20 @@ function RouteComponent() {
 					{selectedTool && (
 						<div className="w-80 bg-white border-l border-gray-200 flex flex-col h-full">
 							{selectedTool === 'ai' && (
-								<div className="flex flex-col h-full">
-									{/* Chat Header */}
-									<div className="p-4 border-b border-gray-200">
-										<h3 className="font-semibold text-lg">AI Assistant</h3>
-									</div>
-
-									{/* Chat Messages */}
-									<div
-										className="flex-1 overflow-y-auto p-4 space-y-4"
-										ref={chatScrollRef}
-									>
-										{chatMessages.length === 0 ? (
-											<div className="flex flex-col items-center justify-center h-full text-center text-gray-400">
-												<Sparkles className="h-12 w-12 mb-3 opacity-50" />
-												<p className="text-sm">Start a conversation with AI</p>
-												<p className='text-xs mt-1'>
-													Ask questions or request form fields
-												</p>
-											</div>
-										) : (
-											chatMessages.map((message) => {
-												const isAssistant = message.role === 'assistant'
-												const userName = isAssistant
-													? 'AI'
-													: user?.fullName || 'User'
-												const userImage = isAssistant
-													? undefined
-													: user?.imageUrl ||
-														`https://api.dicebear.com/7.x/initials/svg?seed=${userName}`
-
-												return (
-													<div
-														className={cn(
-															'flex gap-3',
-															isAssistant ? 'flex-row' : 'flex-row-reverse'
-														)}
-														key={message._id}
-													>
-														{/* Avatar */}
-														<div className='shrink-0'>
-															{isAssistant ? (
-																<div className="w-8 h-8 rounded-full bg-linear-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-																	<Sparkles className='h-4 w-4 text-white' />
-																</div>
-															) : (
-																<img
-																	alt={userName}
-																	className='w-8 h-8 rounded-full'
-																	src={userImage}
-																/>
-															)}
-														</div>
-
-														{/* Message Content */}
-														<div
-															className={cn(
-																'flex-1 min-w-0',
-																isAssistant ? 'mr-8' : 'ml-8'
-															)}
-														>
-															<div
-																className={cn(
-																	'rounded-lg px-3 py-2 text-sm',
-																	isAssistant
-																		? 'bg-gray-100 text-gray-900'
-																		: 'bg-blue-500 text-white'
-																)}
-															>
-																<p className="whitespace-pre-wrap wrap-break-word">
-																	{message.content}
-																</p>
-															</div>
-
-															{/* Message Actions */}
-															<div className="flex items-center gap-2 mt-1.5">
-																<span className='text-xs text-gray-400'>
-																	{new Date(
-																		message._creationTime
-																	).toLocaleTimeString([], {
-																		hour: '2-digit',
-																		minute: '2-digit'
-																	})}
-																</span>
-																{isAssistant && (
-																	<Button
-																		className='h-6 px-2 text-xs'
-																		onClick={() => undoMessage(message._id)}
-																		size='sm'
-																		variant='ghost'
-																	>
-																		<Undo2 className='h-3 w-3 mr-1' />
-																		Undo
-																	</Button>
-																)}
-															</div>
-														</div>
-													</div>
-												)
-											})
-										)}
-									</div>
-
-									{/* Chat Input */}
-									<div className="p-4 border-t border-gray-200">
-										<InputGroup>
-											<InputGroupTextarea
-												onChange={(e) => setChatMessage(e.target.value)}
-												onKeyDown={(e) => {
-													if (e.key === 'Enter' && !e.shiftKey) {
-														e.preventDefault()
-														sendMessage()
-													}
-												}}
-												placeholder='Type your message...'
-												rows={2}
-												value={chatMessage}
-											/>
-											<InputGroupAddon align="block-end">
-												<input
-													accept='*/*'
-													className='hidden'
-													id='chat-file-upload'
-													multiple
-													onChange={(e) => {
-														if (e.target.files) {
-															setAttachments(Array.from(e.target.files))
-														}
-													}}
-													type='file'
-												/>
-												<label htmlFor='chat-file-upload'>
-													<InputGroupButton
-														className='rounded-full'
-														size='icon-xs'
-														type='button'
-														variant='outline'
-													>
-														<Paperclip className='h-3.5 w-3.5' />
-													</InputGroupButton>
-												</label>
-												{attachments.length > 0 && (
-													<InputGroupText className='text-xs'>
-														{attachments.length} file(s)
-													</InputGroupText>
-												)}
-												<Separator className="h-4!" orientation="vertical" />
-												<InputGroupButton
-													className='rounded-full'
-													disabled={!chatMessage.trim()}
-													onClick={sendMessage}
-													size='icon-xs'
-													type='button'
-													variant='default'
-												>
-													<ArrowUp className='h-3.5 w-3.5' />
-													<span className='sr-only'>Send</span>
-												</InputGroupButton>
-											</InputGroupAddon>
-										</InputGroup>
-									</div>
-								</div>
+								<AIAssistantPanel
+									attachments={attachments}
+									chatMessage={chatMessage}
+									messages={chatMessages as ChatMessage[]}
+									onAttachmentsChange={setAttachments}
+									onChatMessageChange={setChatMessage}
+									onSendMessage={sendMessage}
+									onUndoMessage={undoMessage}
+									userImage={user?.imageUrl || ''}
+									userName={user?.fullName || 'User'}
+								/>
 							)}
 							{selectedTool === 'fields' && (
-								<div className="space-y-4 p-6">
-									<h3 className="font-semibold text-lg">Fields</h3>
-									<div className='space-y-2'>
-										{/* Single Line Text Field */}
-										<DraggableFieldButton
-											description="Single line text input."
-											icon={Type}
-											id='text-field'
-											onClick={() => addField('singleline')}
-											title='Text'
-										/>
-										{/* Multiline Text Field */}
-										<DraggableFieldButton
-											description="Multiple lines text area."
-											icon={AlignLeft}
-											id='multiline-field'
-											onClick={() => addField('multiline')}
-											title='Multiline Text'
-										/>
-										{/* Number Field */}
-										<DraggableFieldButton
-											description="Numeric input field."
-											icon={Hash}
-											id='number-field'
-											onClick={() => addField('number')}
-											title='Number'
-										/>
-										{/* Select Field */}
-										<DraggableFieldButton
-											description='Dropdown select.'
-											icon={ListPlus}
-											id='select-field'
-											onClick={() => addField('select')}
-											title='Select'
-										/>
-										{/* Checkbox Field */}
-										<DraggableFieldButton
-											description="Multiple choice checkboxes."
-											icon={CheckSquare}
-											id='checkbox-field'
-											onClick={() => addField('checkbox')}
-											title='Checkbox'
-										/>
-										{/* Date Field */}
-										<DraggableFieldButton
-											description='Date picker field.'
-											icon={Calendar}
-											id='date-field'
-											onClick={() => addField('date')}
-											title='Date'
-										/>
-									</div>
-								</div>
+								<FieldsSidebarPanel onAddField={addField} />
 							)}
 						</div>
 					)}
@@ -1083,7 +519,7 @@ function RouteComponent() {
 							onClick={() =>
 								setSelectedTool(selectedTool === 'ai' ? null : 'ai')
 							}
-							size='icon'
+							size="icon"
 							variant={selectedTool === 'ai' ? 'default' : 'ghost'}
 						>
 							<Sparkles className="h-5 w-5" />
@@ -1092,7 +528,7 @@ function RouteComponent() {
 							onClick={() =>
 								setSelectedTool(selectedTool === 'fields' ? null : 'fields')
 							}
-							size='icon'
+							size="icon"
 							variant={selectedTool === 'fields' ? 'default' : 'ghost'}
 						>
 							<ListPlus className="h-5 w-5" />
@@ -1102,86 +538,7 @@ function RouteComponent() {
 			</div>
 
 			<DragOverlay>
-				{activeId === 'text-field' && (
-					<div className="w-[300px] border border-gray-300 rounded-lg p-4 bg-white shadow-xl opacity-90">
-						<div className="space-y-2">
-							<div className="font-medium text-sm text-gray-700">
-								Untitled Question
-							</div>
-							<div className="text-xs text-gray-400 border-b border-gray-200 pb-1">
-								Short answer text
-							</div>
-						</div>
-					</div>
-				)}
-				{activeId === 'multiline-field' && (
-					<div className="w-[300px] border border-gray-300 rounded-lg p-4 bg-white shadow-xl opacity-90">
-						<div className="space-y-2">
-							<div className="font-medium text-sm text-gray-700">
-								Untitled Question
-							</div>
-							<div className="text-xs text-gray-400 border-b border-gray-200 pb-1 pt-2">
-								Long answer text...
-							</div>
-						</div>
-					</div>
-				)}
-				{activeId === 'number-field' && (
-					<div className="w-[300px] border border-gray-300 rounded-lg p-4 bg-white shadow-xl opacity-90">
-						<div className="space-y-2">
-							<div className="font-medium text-sm text-gray-700">
-								Untitled Question
-							</div>
-							<div className="text-xs text-gray-400 border-b border-gray-200 pb-1">
-								Number
-							</div>
-						</div>
-					</div>
-				)}
-				{activeId === 'select-field' && (
-					<div className="w-[300px] border border-gray-300 rounded-lg p-4 bg-white shadow-xl opacity-90">
-						<div className="space-y-2">
-							<div className="font-medium text-sm text-gray-700">
-								Untitled Question
-							</div>
-							<div className="text-xs text-gray-400 border border-gray-200 rounded px-2 py-1">
-								Select an option...
-							</div>
-						</div>
-					</div>
-				)}
-				{activeId === 'checkbox-field' && (
-					<div className="w-[300px] border border-gray-300 rounded-lg p-4 bg-white shadow-xl opacity-90">
-						<div className="space-y-2">
-							<div className="font-medium text-sm text-gray-700">
-								Untitled Question
-							</div>
-							<div className="space-y-1.5">
-								<div className="flex items-center gap-2 text-xs text-gray-400">
-									<Checkbox className="h-3.5 w-3.5" disabled />
-									<span>Option 1</span>
-								</div>
-								<div className="flex items-center gap-2 text-xs text-gray-400">
-									<Checkbox className="h-3.5 w-3.5" disabled />
-									<span>Option 2</span>
-								</div>
-							</div>
-						</div>
-					</div>
-				)}
-				{activeId === 'date-field' && (
-					<div className="w-[300px] border border-gray-300 rounded-lg p-4 bg-white shadow-xl opacity-90">
-						<div className="space-y-2">
-							<div className="font-medium text-sm text-gray-700">
-								Untitled Question
-							</div>
-							<div className="flex items-center gap-2 text-xs text-gray-400 border border-gray-200 rounded px-2 py-1">
-								<Calendar className="h-3.5 w-3.5" />
-								<span>MM/DD/YYYY</span>
-							</div>
-						</div>
-					</div>
-				)}
+				<DragOverlayContent activeId={activeId} />
 			</DragOverlay>
 		</DndContext>
 	)

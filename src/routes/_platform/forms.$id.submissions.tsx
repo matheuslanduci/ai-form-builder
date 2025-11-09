@@ -1,26 +1,20 @@
 import { useOrganization, useUser } from '@clerk/tanstack-react-start'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
-import {
-	ChevronLeft,
-	ChevronRight,
-	Download,
-	Eye,
-	Inbox,
-	Loader2,
-	MoreHorizontal,
-	Trash2
-} from 'lucide-react'
+import { Download, Eye, Loader2, MoreHorizontal, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { z } from 'zod'
 import { Button } from '~/components/ui/button'
 import {
 	ContextMenu,
 	ContextMenuContent,
 	ContextMenuItem,
+	ContextMenuLabel,
+	ContextMenuSeparator,
 	ContextMenuTrigger
 } from '~/components/ui/context-menu'
 import {
@@ -34,8 +28,11 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
 	DropdownMenuTrigger
 } from '~/components/ui/dropdown-menu'
+import { Pagination } from '~/components/ui/pagination'
 import {
 	Table,
 	TableBody,
@@ -44,6 +41,7 @@ import {
 	TableHeader,
 	TableRow
 } from '~/components/ui/table'
+import { seo } from '~/lib/seo'
 
 type Submission = {
 	_id: Id<'formSubmission'>
@@ -55,10 +53,14 @@ type Submission = {
 
 const MENU_COMPONENTS = {
 	dropdown: {
-		Item: DropdownMenuItem
+		Item: DropdownMenuItem,
+		Label: DropdownMenuLabel,
+		Separator: DropdownMenuSeparator
 	},
 	context: {
-		Item: ContextMenuItem
+		Item: ContextMenuItem,
+		Label: ContextMenuLabel,
+		Separator: ContextMenuSeparator
 	}
 } as const
 
@@ -71,10 +73,11 @@ function SubmissionMenuItems({
 	onViewClick: () => void
 	onDeleteClick: () => void
 }) {
-	const { Item } = MENU_COMPONENTS[variant]
+	const { Item, Label } = MENU_COMPONENTS[variant]
 
 	return (
 		<>
+			<Label>Actions</Label>
 			<Item onClick={onViewClick}>
 				<Eye className="mr-2 h-4 w-4" />
 				View
@@ -87,15 +90,28 @@ function SubmissionMenuItems({
 	)
 }
 
+const submissionsSearchSchema = z.object({
+	cursor: z.string().nullable().catch(null).default(null)
+})
+
 export const Route = createFileRoute('/_platform/forms/$id/submissions')({
-	component: RouteComponent
+	component: RouteComponent,
+	validateSearch: submissionsSearchSchema,
+	head: () => ({
+		meta: seo({
+			title: 'Form Submissions - AI Form Builder',
+			description: 'View and manage form submissions'
+		})
+	})
 })
 
 function RouteComponent() {
 	const { id: formId } = Route.useParams()
+	const search = Route.useSearch()
+	const navigate = useNavigate({ from: Route.fullPath })
 	const { organization, isLoaded: isOrgLoaded } = useOrganization()
 	const { user } = useUser()
-	const [paginationCursor, setPaginationCursor] = useState<string | null>(null)
+	const [cursorStack, setCursorStack] = useState<(string | null)[]>([])
 	const [selectedSubmission, setSelectedSubmission] =
 		useState<Submission | null>(null)
 
@@ -130,7 +146,7 @@ function RouteComponent() {
 				? {
 						formId: formId as Id<'form'>,
 						businessId: organization?.id ?? (user?.id as string),
-						paginationOpts: { numItems: 20, cursor: paginationCursor }
+						paginationOpts: { numItems: 20, cursor: search.cursor }
 					}
 				: 'skip'
 		)
@@ -175,13 +191,23 @@ function RouteComponent() {
 	const sortedFields = fields?.sort((a, b) => a.order - b.order) || []
 
 	const handleNextPage = () => {
-		if (submissionsResult?.continueCursor) {
-			setPaginationCursor(submissionsResult.continueCursor)
-		}
+		if (!submissionsResult?.continueCursor || submissionsResult.isDone) return
+		setCursorStack((prev) => [...prev, search.cursor])
+		navigate({
+			search: { cursor: submissionsResult.continueCursor }
+		})
 	}
 
 	const handlePrevPage = () => {
-		setPaginationCursor(null)
+		setCursorStack((prev) => {
+			if (prev.length === 0) return prev
+			const newStack = [...prev]
+			const previousCursor = newStack.pop() as string | null
+			navigate({
+				search: { cursor: previousCursor }
+			})
+			return newStack
+		})
 	}
 
 	const formatDate = (timestamp: number) => {
@@ -226,12 +252,13 @@ function RouteComponent() {
 	}
 
 	return (
-		<div className="h-full flex flex-col">
-			{/* Header */}
-			<div className="border-b bg-white px-6 py-4">
+		<div className="h-full overflow-auto">
+			<div className="mx-auto max-w-4xl p-6 space-y-8">
 				<div className="flex items-center justify-between">
 					<div>
-						<h2 className="text-xl font-semibold text-gray-900">Submissions</h2>
+						<h1 className="text-2xl font-semibold text-gray-900">
+							Submissions
+						</h1>
 						<p className="text-sm text-gray-500 mt-1">
 							{submissions.length} submission
 							{submissions.length !== 1 ? 's' : ''} on this page
@@ -246,120 +273,111 @@ function RouteComponent() {
 						)}
 					</div>
 				</div>
-			</div>
 
-			{/* Content */}
-			<div className="flex-1 overflow-auto p-6">
-				{submissions.length === 0 ? (
-					<div className="flex flex-col items-center justify-center h-full text-center">
-						<div className="rounded-full bg-gray-100 p-6 mb-4">
-							<Inbox className="h-12 w-12 text-gray-400" />
-						</div>
-						<h3 className="text-lg font-semibold text-gray-900 mb-2">
-							No submissions yet
-						</h3>
-						<p className="text-gray-500 max-w-md">
-							Once people start submitting this form, their responses will
-							appear here.
-						</p>
-					</div>
-				) : (
-					<>
-						<div className="bg-white rounded-lg border">
-							<Table>
-								<TableHeader>
-									<TableRow>
-										{sortedFields.slice(0, 3).map((field) => (
-											<TableHead key={field._id}>{field.title}</TableHead>
-										))}
-										<TableHead>Submitted At</TableHead>
-										<TableHead className="w-[50px]" />
-									</TableRow>
-								</TableHeader>
-								<TableBody>
-									{submissions.map((submission) => (
-										<ContextMenu key={submission._id}>
-											<ContextMenuTrigger asChild>
-												<TableRow>
-													{sortedFields.slice(0, 3).map((field) => (
-														<TableCell
-															className="max-w-[300px] truncate"
-															key={field._id}
-														>
-															{getFieldValue(submission.data, field._id)}
-														</TableCell>
-													))}
-													<TableCell className="text-gray-600">
-														{formatDate(submission.submittedAt)}
-													</TableCell>
-													<TableCell>
-														<DropdownMenu>
-															<DropdownMenuTrigger asChild>
-																<Button size="icon" variant="ghost">
-																	<MoreHorizontal className="h-4 w-4" />
-																</Button>
-															</DropdownMenuTrigger>
-															<DropdownMenuContent align="end">
-																<SubmissionMenuItems
-																	onDeleteClick={() =>
-																		handleDeleteSubmission(submission._id)
-																	}
-																	onViewClick={() =>
-																		setSelectedSubmission(submission)
-																	}
-																	variant="dropdown"
-																/>
-															</DropdownMenuContent>
-														</DropdownMenu>
-													</TableCell>
-												</TableRow>
-											</ContextMenuTrigger>
-											<ContextMenuContent className="w-44">
-												<SubmissionMenuItems
-													onDeleteClick={() =>
-														handleDeleteSubmission(submission._id)
+				<div className="bg-white rounded-lg border">
+					<Table>
+						<TableHeader>
+							<TableRow>
+								{sortedFields.slice(0, 3).map((field) => (
+									<TableHead key={field._id}>{field.title}</TableHead>
+								))}
+								<TableHead>Submitted At</TableHead>
+								<TableHead className="w-[50px]" />
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							{submissions.length === 0 ? (
+								<TableRow>
+									<TableCell
+										className="h-24 text-center"
+										colSpan={sortedFields.slice(0, 3).length + 2}
+									>
+										No results.
+									</TableCell>
+								</TableRow>
+							) : (
+								submissions.map((submission) => (
+									<ContextMenu key={submission._id}>
+										<ContextMenuTrigger asChild>
+											<TableRow
+												className="cursor-pointer"
+												onClick={(e) => {
+													// Don't trigger if clicking on the dropdown button
+													const target = e.target as HTMLElement
+													if (
+														target.closest('button') ||
+														target.closest('[role="menuitem"]')
+													) {
+														return
 													}
-													onViewClick={() => setSelectedSubmission(submission)}
-													variant="context"
-												/>
-											</ContextMenuContent>
-										</ContextMenu>
-									))}
-								</TableBody>
-							</Table>
-						</div>
+													setSelectedSubmission(submission)
+												}}
+											>
+												{sortedFields.slice(0, 3).map((field) => (
+													<TableCell
+														className="max-w-[300px] truncate"
+														key={field._id}
+													>
+														{getFieldValue(submission.data, field._id)}
+													</TableCell>
+												))}
+												<TableCell className="text-gray-600">
+													{formatDate(submission.submittedAt)}
+												</TableCell>
+												<TableCell onClick={(e) => e.stopPropagation()}>
+													<DropdownMenu>
+														<DropdownMenuTrigger asChild>
+															<Button size="icon" variant="ghost">
+																<MoreHorizontal className="h-4 w-4" />
+															</Button>
+														</DropdownMenuTrigger>
+														<DropdownMenuContent align="end">
+															<SubmissionMenuItems
+																onDeleteClick={() =>
+																	handleDeleteSubmission(submission._id)
+																}
+																onViewClick={() =>
+																	setSelectedSubmission(submission)
+																}
+																variant="dropdown"
+															/>
+														</DropdownMenuContent>
+													</DropdownMenu>
+												</TableCell>
+											</TableRow>
+										</ContextMenuTrigger>
+										<ContextMenuContent className="w-44">
+											<SubmissionMenuItems
+												onDeleteClick={() =>
+													handleDeleteSubmission(submission._id)
+												}
+												onViewClick={() => setSelectedSubmission(submission)}
+												variant="context"
+											/>
+										</ContextMenuContent>
+									</ContextMenu>
+								))
+							)}
+						</TableBody>
+					</Table>
+				</div>
 
-						{/* Pagination */}
-						<div className="flex items-center justify-between mt-4">
-							<div className="text-sm text-gray-500">
-								Showing {submissions.length} submissions
-							</div>
-							<div className="flex items-center gap-2">
-								<Button
-									disabled={paginationCursor === null}
-									onClick={handlePrevPage}
-									size="sm"
-									variant="outline"
-								>
-									<ChevronLeft className="h-4 w-4 mr-1" />
-									Previous
-								</Button>
-								<Button
-									disabled={!hasMore}
-									onClick={handleNextPage}
-									size="sm"
-									variant="outline"
-								>
-									Next
-									<ChevronRight className="h-4 w-4 ml-1" />
-								</Button>
-							</div>
+				{submissions.length > 0 && (
+					<div className="flex items-center justify-between">
+						<div className="text-sm text-gray-500">
+							Showing {submissions.length} submissions
 						</div>
-					</>
+						<Pagination
+							className="flex items-center gap-2"
+							hasNext={hasMore}
+							hasPrevious={cursorStack.length > 0}
+							onNext={handleNextPage}
+							onPrevious={handlePrevPage}
+						/>
+					</div>
 				)}
 			</div>
 
-			{/* Submission Detail Dialog */}
 			<Dialog
 				onOpenChange={() => setSelectedSubmission(null)}
 				open={!!selectedSubmission}

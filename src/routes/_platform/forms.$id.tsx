@@ -1,10 +1,14 @@
 import { useOrganization } from '@clerk/tanstack-react-start'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import {
+	queryOptions,
+	useMutation,
+	useSuspenseQuery
+} from '@tanstack/react-query'
 import {
 	createFileRoute,
 	Link,
-	Navigate,
+	notFound,
 	Outlet,
 	useParams
 } from '@tanstack/react-router'
@@ -16,11 +20,41 @@ import { toast } from 'sonner'
 import { ShareFormDialog } from '~/components/forms/share-form-dialog'
 import { Button } from '~/components/ui/button'
 import { Separator } from '~/components/ui/separator'
-import { Skeleton } from '~/components/ui/skeleton'
+import { seo } from '~/lib/seo'
 import { cn } from '~/lib/utils'
 
+const formQueryOptions = (formId: Id<'form'>, businessId: string) =>
+	queryOptions(
+		convexQuery(api.form.get, {
+			formId,
+			businessId
+		})
+	)
+
 export const Route = createFileRoute('/_platform/forms/$id')({
-	component: RouteComponent
+	loader: async ({ context, params }) => {
+		const formId = params.id as Id<'form'>
+		const businessId = context.auth.org.id ?? (context.auth.userId as string)
+
+		const form = await context.queryClient.ensureQueryData(
+			formQueryOptions(formId, businessId)
+		)
+
+		if (!form) {
+			throw notFound()
+		}
+
+		return { form }
+	},
+	component: RouteComponent,
+	head: ({ loaderData }) => ({
+		meta: loaderData
+			? seo({
+					title: `${loaderData.form.title} - AI Form Builder`,
+					description: loaderData.form.description || 'Manage your form'
+				})
+			: undefined
+	})
 })
 
 const NAV_ITEMS = [
@@ -31,25 +65,15 @@ const NAV_ITEMS = [
 ] as const
 
 function RouteComponent() {
-	const { organization, isLoaded } = useOrganization()
+	const { organization } = useOrganization()
 	const { auth } = Route.useRouteContext()
 	const { id } = useParams({ strict: false })
 	const [shareDialogOpen, setShareDialogOpen] = useState(false)
 
-	const {
-		data: form,
-		error,
-		isLoading
-	} = useQuery(
-		convexQuery(
-			api.form.get,
-			isLoaded
-				? {
-						formId: id as Id<'form'>,
-						businessId: organization?.id ?? (auth.userId as string)
-					}
-				: 'skip'
-		)
+	const businessId = organization?.id ?? (auth.userId as string)
+
+	const { data: form } = useSuspenseQuery(
+		formQueryOptions(id as Id<'form'>, businessId)
 	)
 
 	const updateStatusMutationFn = useConvexMutation(api.form.updateStatus)
@@ -105,19 +129,13 @@ function RouteComponent() {
 		}
 	}
 
-	if (error) {
-		return <Navigate from="/forms/$id" to="/forms" />
-	}
-
 	return (
 		<>
 			<div className="flex h-screen flex-col">
 				<div className="border-b">
 					<div className="flex h-14 items-center justify-between px-6">
 						<div className="flex items-center gap-6">
-							<h1 className="text-lg font-semibold">
-								{isLoading ? <Skeleton className="h-6 w-48" /> : form?.title}
-							</h1>
+							<h1 className="text-lg font-semibold">{form?.title}</h1>
 
 							<Separator className="h-6!" orientation="vertical" />
 

@@ -39,6 +39,7 @@ export const get = query({
 			businessId: v.string(),
 			title: v.string(),
 			description: v.optional(v.string()),
+			successMessage: v.optional(v.string()),
 			submissionCount: v.number(),
 			status: v.union(
 				v.literal('draft'),
@@ -80,11 +81,40 @@ export const create = mutation({
 	handler: async (ctx, args) => {
 		const user = await resolveIdentity(ctx)
 
+		let emailAddress: string[] = []
+
 		if (user.subject !== args.businessId) {
-			await resolveMembership(ctx, {
+			const { clerkOrg } = await resolveMembership(ctx, {
 				organizationId: args.businessId,
 				userId: user.subject
 			})
+
+			const promises = []
+
+			for (const member of clerkOrg.members) {
+				if (member.role === 'org:admin') {
+					promises.push(
+						ctx.db
+							.query('clerkUser')
+							.withIndex('byClerkId', (q) => q.eq('clerkId', member.clerkId))
+							.unique()
+					)
+				}
+
+				const admins = await Promise.all(promises)
+
+				emailAddress = admins
+					.filter((admin) => admin !== null && admin.emailAddress.length > 0)
+					// biome-ignore lint/style/noNonNullAssertion: Filtering nulls above
+					.flatMap((admin) => admin!.emailAddress)
+			}
+		} else {
+			const clerkUser = await ctx.db
+				.query('clerkUser')
+				.withIndex('byClerkId', (q) => q.eq('clerkId', user.subject))
+				.unique()
+
+			emailAddress = clerkUser ? clerkUser.emailAddress : []
 		}
 
 		const formId = await ctx.db.insert('form', {
@@ -97,7 +127,15 @@ export const create = mutation({
 			lastUpdatedAt: Date.now()
 		})
 
-		// Record the form creation in edit history
+		for (const email of emailAddress) {
+			await ctx.db.insert('formNotification', {
+				formId,
+				businessId: args.businessId,
+				email,
+				enabled: true
+			})
+		}
+
 		await ctx.scheduler.runAfter(0, internal.formEditHistory.recordEdit, {
 			formId,
 			userId: user.subject,
@@ -116,7 +154,8 @@ export const update = mutation({
 	args: {
 		formId: v.id('form'),
 		title: v.optional(v.string()),
-		description: v.optional(v.string())
+		description: v.optional(v.string()),
+		successMessage: v.optional(v.string())
 	},
 	returns: v.null(),
 	handler: async (ctx, args) => {
@@ -136,6 +175,7 @@ export const update = mutation({
 		const updates: {
 			title?: string
 			description?: string
+			successMessage?: string
 			lastUpdatedAt: number
 		} = {
 			lastUpdatedAt: Date.now()
@@ -157,6 +197,9 @@ export const update = mutation({
 			updates.description = args.description
 			changeDetails.oldDescription = form.description
 			changeDetails.newDescription = args.description
+		}
+		if (args.successMessage !== undefined) {
+			updates.successMessage = args.successMessage
 		}
 
 		await ctx.db.patch(args.formId, updates)

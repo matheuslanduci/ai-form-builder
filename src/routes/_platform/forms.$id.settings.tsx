@@ -1,26 +1,22 @@
 import { useOrganization, useUser } from '@clerk/tanstack-react-start'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
-import {
-	AlertCircle,
-	Check,
-	Clock,
-	ExternalLink,
-	Eye,
-	Loader2,
-	Save,
-	Share2,
-	Trash2
-} from 'lucide-react'
+import { Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { DeleteFormDialog } from '~/components/forms/columns'
+import { BasicInformationSection } from '~/components/forms/settings/basic-information-section'
+import { DangerZoneSection } from '~/components/forms/settings/danger-zone-section'
+import { EmailNotificationsSection } from '~/components/forms/settings/email-notifications-section'
+import { FormMetadataSection } from '~/components/forms/settings/form-metadata-section'
+import { QuickActionsSection } from '~/components/forms/settings/quick-actions-section'
+import { StatusSection } from '~/components/forms/settings/status-section'
+import { TagsSection } from '~/components/forms/settings/tags-section'
 import { ShareFormDialog } from '~/components/forms/share-form-dialog'
 import { Button } from '~/components/ui/button'
-import { Checkbox } from '~/components/ui/checkbox'
 import {
 	Dialog,
 	DialogContent,
@@ -29,14 +25,17 @@ import {
 	DialogHeader,
 	DialogTitle
 } from '~/components/ui/dialog'
-import { Input } from '~/components/ui/input'
-import { Label } from '~/components/ui/label'
 import { Separator } from '~/components/ui/separator'
-import { Tabs, TabsList, TabsTrigger } from '~/components/ui/tabs'
-import { Textarea } from '~/components/ui/textarea'
+import { seo } from '~/lib/seo'
 
 export const Route = createFileRoute('/_platform/forms/$id/settings')({
-	component: RouteComponent
+	component: RouteComponent,
+	head: () => ({
+		meta: seo({
+			title: 'Form Settings - AI Form Builder',
+			description: 'Configure your form settings and preferences'
+		})
+	})
 })
 
 function RouteComponent() {
@@ -46,15 +45,20 @@ function RouteComponent() {
 
 	const [title, setTitle] = useState('')
 	const [description, setDescription] = useState('')
+	const [successMessage, setSuccessMessage] = useState('')
 	const [status, setStatus] = useState<'draft' | 'published' | 'archived'>(
 		'draft'
 	)
 	const [selectedTags, setSelectedTags] = useState<Id<'tag'>[]>([])
-	const [hasChanges, setHasChanges] = useState(false)
 	const [shareDialogOpen, setShareDialogOpen] = useState(false)
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
 	const [deleteSubmissionsDialogOpen, setDeleteSubmissionsDialogOpen] =
 		useState(false)
+	const [newNotificationEmail, setNewNotificationEmail] = useState('')
+	const [editingNotification, setEditingNotification] = useState<{
+		id: string
+		email: string
+	} | null>(null)
 
 	const businessId = organization?.id ?? (user?.id as string)
 
@@ -70,15 +74,15 @@ function RouteComponent() {
 		)
 	)
 
-	// Initialize state when form loads
 	useEffect(() => {
-		if (form && !hasChanges) {
+		if (form) {
 			setTitle(form.title)
 			setDescription(form.description || '')
+			setSuccessMessage(form.successMessage || '')
 			setStatus(form.status)
 			setSelectedTags(form.tags)
 		}
-	}, [form, hasChanges])
+	}, [form])
 
 	const { data: tags } = useQuery(
 		convexQuery(
@@ -91,45 +95,92 @@ function RouteComponent() {
 		)
 	)
 
-	const updateFormMutationFn = useConvexMutation(api.form.update)
+	const { data: notifications, isLoading: isNotificationsLoading } = useQuery(
+		convexQuery(
+			api.formNotification.list,
+			isOrgLoaded && form
+				? {
+						formId: formId as Id<'form'>,
+						businessId
+					}
+				: 'skip'
+		)
+	)
+
 	const updateFormMutation = useMutation({
-		mutationFn: updateFormMutationFn,
+		mutationFn: useConvexMutation(api.form.update),
 		onSuccess: () => {
 			toast.success('Form updated successfully')
-			setHasChanges(false)
 		},
 		onError: () => {
 			toast.error('Failed to update form')
 		}
 	})
 
-	const updateStatusMutationFn = useConvexMutation(api.form.updateStatus)
 	const updateStatusMutation = useMutation({
-		mutationFn: updateStatusMutationFn,
+		mutationFn: useConvexMutation(api.form.updateStatus),
 		onSuccess: () => {
 			toast.success('Status updated successfully')
 		}
 	})
 
-	const updateTagsMutationFn = useConvexMutation(api.form.updateTags)
 	const updateTagsMutation = useMutation({
-		mutationFn: updateTagsMutationFn,
+		mutationFn: useConvexMutation(api.form.updateTags),
 		onSuccess: () => {
 			toast.success('Tags updated successfully')
 		}
 	})
 
-	const deleteAllSubmissionsMutationFn = useConvexMutation(
-		api.formSubmission.deleteAllSubmissions
-	)
 	const deleteAllSubmissionsMutation = useMutation({
-		mutationFn: deleteAllSubmissionsMutationFn,
+		mutationFn: useConvexMutation(api.formSubmission.deleteAllSubmissions),
 		onSuccess: () => {
 			toast.success('All submissions deleted successfully')
 			setDeleteSubmissionsDialogOpen(false)
 		},
 		onError: () => {
 			toast.error('Failed to delete submissions')
+		}
+	})
+
+	const createNotificationMutation = useMutation({
+		mutationFn: useConvexMutation(api.formNotification.create),
+		onSuccess: () => {
+			toast.success('Notification email added successfully')
+			setNewNotificationEmail('')
+		},
+		onError: (error: Error) => {
+			toast.error(error.message || 'Failed to add notification email')
+		}
+	})
+
+	const updateNotificationMutation = useMutation({
+		mutationFn: useConvexMutation(api.formNotification.update),
+		onSuccess: () => {
+			toast.success('Notification email updated successfully')
+			setEditingNotification(null)
+		},
+		onError: (error: Error) => {
+			toast.error(error.message || 'Failed to update notification email')
+		}
+	})
+
+	const toggleNotificationMutation = useMutation({
+		mutationFn: useConvexMutation(api.formNotification.toggleEnabled),
+		onSuccess: () => {
+			toast.success('Notification status updated')
+		},
+		onError: () => {
+			toast.error('Failed to update notification status')
+		}
+	})
+
+	const removeNotificationMutation = useMutation({
+		mutationFn: useConvexMutation(api.formNotification.remove),
+		onSuccess: () => {
+			toast.success('Notification email removed successfully')
+		},
+		onError: () => {
+			toast.error('Failed to remove notification email')
 		}
 	})
 
@@ -151,12 +202,37 @@ function RouteComponent() {
 		)
 	}
 
-	const handleSave = () => {
-		updateFormMutation.mutate({
-			formId: form._id,
-			title: title.trim(),
-			description: description.trim()
-		})
+	const handleSave = (field: 'title' | 'description' | 'successMessage') => {
+		if (!form) return
+
+		const updates: {
+			formId: Id<'form'>
+			title?: string
+			description?: string
+			successMessage?: string
+		} = {
+			formId: form._id
+		}
+
+		// Only include fields that have changed
+		if (field === 'title' && title.trim() !== form.title) {
+			updates.title = title.trim()
+		} else if (
+			field === 'description' &&
+			description.trim() !== (form.description || '')
+		) {
+			updates.description = description.trim()
+		} else if (
+			field === 'successMessage' &&
+			successMessage.trim() !== (form.successMessage || '')
+		) {
+			updates.successMessage = successMessage.trim()
+		}
+
+		// Only save if there's actually a change
+		if (Object.keys(updates).length > 1) {
+			updateFormMutation.mutate(updates)
+		}
 	}
 
 	const handleStatusChange = (newStatus: string) => {
@@ -173,7 +249,6 @@ function RouteComponent() {
 			? selectedTags.filter((id) => id !== tagId)
 			: [...selectedTags, tagId]
 		setSelectedTags(newTags)
-		setHasChanges(true)
 		updateTagsMutation.mutate({
 			formId: form._id,
 			tags: newTags
@@ -182,12 +257,26 @@ function RouteComponent() {
 
 	const handleTitleChange = (value: string) => {
 		setTitle(value)
-		setHasChanges(true)
 	}
 
 	const handleDescriptionChange = (value: string) => {
 		setDescription(value)
-		setHasChanges(true)
+	}
+
+	const handleSuccessMessageChange = (value: string) => {
+		setSuccessMessage(value)
+	}
+
+	const handleTitleBlur = () => {
+		handleSave('title')
+	}
+
+	const handleDescriptionBlur = () => {
+		handleSave('description')
+	}
+
+	const handleSuccessMessageBlur = () => {
+		handleSave('successMessage')
 	}
 
 	const handleDeleteAllSubmissions = () => {
@@ -197,22 +286,54 @@ function RouteComponent() {
 		})
 	}
 
-	const formatDate = (timestamp?: number) => {
-		if (!timestamp) return 'Never'
-		return new Intl.DateTimeFormat('en-US', {
-			month: 'short',
-			day: 'numeric',
-			year: 'numeric',
-			hour: 'numeric',
-			minute: '2-digit'
-		}).format(new Date(timestamp))
+	const handleAddNotification = () => {
+		if (!newNotificationEmail.trim()) {
+			toast.error('Please enter an email address')
+			return
+		}
+
+		createNotificationMutation.mutate({
+			formId: form._id,
+			businessId,
+			email: newNotificationEmail.trim()
+		})
+	}
+
+	const handleUpdateNotification = () => {
+		if (!editingNotification || !editingNotification.email.trim()) {
+			toast.error('Please enter an email address')
+			return
+		}
+
+		updateNotificationMutation.mutate({
+			notificationId: editingNotification.id as Id<'formNotification'>,
+			businessId,
+			email: editingNotification.email.trim()
+		})
+	}
+
+	const handleToggleNotification = (
+		notificationId: Id<'formNotification'>,
+		enabled: boolean
+	) => {
+		toggleNotificationMutation.mutate({
+			notificationId,
+			businessId,
+			enabled
+		})
+	}
+
+	const handleRemoveNotification = (notificationId: Id<'formNotification'>) => {
+		removeNotificationMutation.mutate({
+			notificationId,
+			businessId
+		})
 	}
 
 	return (
 		<>
 			<div className="h-full overflow-auto">
 				<div className="mx-auto max-w-4xl p-6 space-y-8">
-					{/* Header */}
 					<div>
 						<h1 className="text-2xl font-semibold text-gray-900">
 							Form Settings
@@ -222,292 +343,81 @@ function RouteComponent() {
 						</p>
 					</div>
 
-					{/* Quick Actions */}
-					<div className="flex flex-wrap gap-2">
-						<Button
-							onClick={() => setShareDialogOpen(true)}
-							size="sm"
-							variant="outline"
-						>
-							<Share2 className="mr-2 h-4 w-4" />
-							Share
-						</Button>
-						<Button asChild size="sm" variant="outline">
-							<a
-								href={`/forms/${form._id}/preview`}
-								rel="noopener noreferrer"
-								target="_blank"
-							>
-								<ExternalLink className="mr-2 h-4 w-4" />
-								Preview
-							</a>
-						</Button>
-						<Button asChild size="sm" variant="outline">
-							<Link params={{ id: form._id }} to="/forms/$id/submissions">
-								<Eye className="mr-2 h-4 w-4" />
-								View Submissions
-							</Link>
-						</Button>
-						<Button asChild size="sm" variant="outline">
-							<Link params={{ id: form._id }} to="/forms/$id/timeline">
-								<Clock className="mr-2 h-4 w-4" />
-								Timeline
-							</Link>
-						</Button>
-					</div>
+					<QuickActionsSection
+						formId={form._id}
+						onShareClick={() => setShareDialogOpen(true)}
+					/>
 
 					<Separator />
 
-					{/* Basic Information */}
-					<div className="space-y-6">
-						<div>
-							<h2 className="text-lg font-semibold text-gray-900">
-								Basic Information
-							</h2>
-							<p className="text-sm text-gray-500 mt-1">
-								Update your form's title and description
-							</p>
-						</div>
-
-						<div className="space-y-4">
-							<div className="space-y-2">
-								<Label htmlFor="title">Title</Label>
-								<Input
-									id="title"
-									onChange={(e) => handleTitleChange(e.target.value)}
-									placeholder="Enter form title"
-									value={title}
-								/>
-							</div>
-
-							<div className="space-y-2">
-								<Label htmlFor="description">Description</Label>
-								<Textarea
-									className="min-h-[100px] resize-y"
-									id="description"
-									onChange={(e) => handleDescriptionChange(e.target.value)}
-									placeholder="Enter form description (optional)"
-									value={description}
-								/>
-							</div>
-
-							{hasChanges && (
-								<Button
-									disabled={
-										!title.trim() ||
-										title === form.title ||
-										updateFormMutation.isPending
-									}
-									onClick={handleSave}
-								>
-									<Save className="mr-2 h-4 w-4" />
-									{updateFormMutation.isPending ? 'Saving...' : 'Save Changes'}
-								</Button>
-							)}
-						</div>
-					</div>
+					<BasicInformationSection
+						description={description}
+						isSaving={updateFormMutation.isPending}
+						onDescriptionBlur={handleDescriptionBlur}
+						onDescriptionChange={handleDescriptionChange}
+						onSuccessMessageBlur={handleSuccessMessageBlur}
+						onSuccessMessageChange={handleSuccessMessageChange}
+						onTitleBlur={handleTitleBlur}
+						onTitleChange={handleTitleChange}
+						successMessage={successMessage}
+						title={title}
+					/>
 
 					<Separator />
 
-					{/* Status */}
-					<div className="space-y-6">
-						<div>
-							<h2 className="text-lg font-semibold text-gray-900">Status</h2>
-							<p className="text-sm text-gray-500 mt-1">
-								Control the visibility and accessibility of your form
-							</p>
-						</div>
-
-						<Tabs onValueChange={handleStatusChange} value={status}>
-							<TabsList>
-								<TabsTrigger value="draft">Draft</TabsTrigger>
-								<TabsTrigger value="published">Published</TabsTrigger>
-								<TabsTrigger value="archived">Archived</TabsTrigger>
-							</TabsList>
-						</Tabs>
-
-						{status === 'draft' && (
-							<div className="flex items-start gap-2 rounded-lg bg-gray-50 p-3 text-sm text-gray-700 border">
-								<AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-								<p>
-									This form is in draft mode and not publicly accessible.
-									Publish it to make it available for submissions.
-								</p>
-							</div>
-						)}
-
-						{status === 'published' && (
-							<div className="flex items-start gap-2 rounded-lg bg-green-50 p-3 text-sm text-green-900 border border-green-200">
-								<Check className="h-4 w-4 mt-0.5 shrink-0" />
-								<p>
-									This form is published and accepting submissions. You can
-									share the public link with others.
-								</p>
-							</div>
-						)}
-
-						{status === 'archived' && (
-							<div className="flex items-start gap-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-900 border border-amber-200">
-								<AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-								<p>
-									This form is archived and not accepting new submissions. You
-									can still view existing submissions.
-								</p>
-							</div>
-						)}
-					</div>
+					<StatusSection onStatusChange={handleStatusChange} status={status} />
 
 					<Separator />
 
-					{/* Tags */}
-					<div className="space-y-6">
-						<div>
-							<h2 className="text-lg font-semibold text-gray-900">Tags</h2>
-							<p className="text-sm text-gray-500 mt-1">
-								Organize your forms with tags
-							</p>
-						</div>
-
-						{tags && tags.length > 0 ? (
-							<div className="space-y-3">
-								{tags.map((tag) => (
-									<div className="flex items-center space-x-2" key={tag._id}>
-										<Checkbox
-											checked={selectedTags.includes(tag._id)}
-											id={`tag-${tag._id}`}
-											onCheckedChange={() => handleTagToggle(tag._id)}
-										/>
-										<label
-											className="flex items-center gap-2 text-sm font-normal leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-											htmlFor={`tag-${tag._id}`}
-										>
-											<span
-												className="h-3 w-3 rounded-full"
-												style={{ backgroundColor: tag.color || '#3b82f6' }}
-											/>
-											{tag.name}
-										</label>
-									</div>
-								))}
-							</div>
-						) : (
-							<p className="text-sm text-gray-500">
-								No tags available. Create tags from the forms list page.
-							</p>
-						)}
-					</div>
+					<TagsSection
+						onTagToggle={handleTagToggle}
+						selectedTags={selectedTags}
+						tags={tags}
+					/>
 
 					<Separator />
 
-					{/* Form Metadata */}
-					<div className="space-y-6">
-						<div>
-							<h2 className="text-lg font-semibold text-gray-900">
-								Form Information
-							</h2>
-							<p className="text-sm text-gray-500 mt-1">
-								Read-only information about your form
-							</p>
-						</div>
-
-						<div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-							<div className="rounded-lg border p-4">
-								<div className="text-sm text-gray-500">Submissions</div>
-								<div className="text-2xl font-semibold mt-1">
-									{form.submissionCount}
-								</div>
-							</div>
-							<div className="rounded-lg border p-4">
-								<div className="text-sm text-gray-500">Created</div>
-								<div className="text-sm font-medium mt-1">
-									{formatDate(form._creationTime)}
-								</div>
-							</div>
-							<div className="rounded-lg border p-4">
-								<div className="text-sm text-gray-500">Last Updated</div>
-								<div className="text-sm font-medium mt-1">
-									{formatDate(form.lastUpdatedAt)}
-								</div>
-							</div>
-						</div>
-
-						<div className="space-y-2">
-							<Label>Form ID</Label>
-							<div className="flex gap-2">
-								<Input
-									className="font-mono text-sm"
-									onClick={(e) => e.currentTarget.select()}
-									readOnly
-									value={form._id}
-								/>
-								<Button
-									onClick={() => {
-										navigator.clipboard.writeText(form._id)
-										toast.success('Form ID copied to clipboard')
-									}}
-									size="sm"
-									variant="outline"
-								>
-									Copy
-								</Button>
-							</div>
-						</div>
-					</div>
+					<EmailNotificationsSection
+						editingNotification={editingNotification}
+						isCreating={createNotificationMutation.isPending}
+						isLoading={isNotificationsLoading}
+						isUpdating={updateNotificationMutation.isPending}
+						newEmail={newNotificationEmail}
+						notifications={notifications}
+						onAddNotification={handleAddNotification}
+						onCancelEdit={() => setEditingNotification(null)}
+						onEditEmailChange={(email) =>
+							setEditingNotification((prev) =>
+								prev ? { ...prev, email } : null
+							)
+						}
+						onNewEmailChange={setNewNotificationEmail}
+						onRemove={handleRemoveNotification}
+						onStartEdit={(id, email) => setEditingNotification({ id, email })}
+						onToggleEnabled={handleToggleNotification}
+						onUpdateNotification={handleUpdateNotification}
+					/>
 
 					<Separator />
 
-					{/* Danger Zone */}
-					<div className="space-y-6">
-						<div>
-							<h2 className="text-lg font-semibold text-red-900">
-								Danger Zone
-							</h2>
-							<p className="text-sm text-red-600 mt-1">
-								Irreversible and destructive actions
-							</p>
-						</div>
+					<FormMetadataSection
+						createdAt={form._creationTime}
+						formId={form._id}
+						lastUpdatedAt={form.lastUpdatedAt}
+						onCopyFormId={() => {
+							navigator.clipboard.writeText(form._id)
+							toast.success('Form ID copied to clipboard')
+						}}
+						submissionCount={form.submissionCount}
+					/>
 
-						<div className="rounded-lg border border-red-200 bg-red-50 p-6 space-y-4">
-							<div className="flex items-center justify-between">
-								<div>
-									<h3 className="font-medium text-red-900">
-										Delete All Submissions
-									</h3>
-									<p className="text-sm text-red-700 mt-1">
-										Permanently delete all {form.submissionCount} submissions.
-										This action cannot be undone.
-									</p>
-								</div>
-								<Button
-									disabled={form.submissionCount === 0}
-									onClick={() => setDeleteSubmissionsDialogOpen(true)}
-									variant="destructive"
-								>
-									<Trash2 className="mr-2 h-4 w-4" />
-									Delete All
-								</Button>
-							</div>
+					<Separator />
 
-							<Separator className="bg-red-200" />
-
-							<div className="flex items-center justify-between">
-								<div>
-									<h3 className="font-medium text-red-900">Delete Form</h3>
-									<p className="text-sm text-red-700 mt-1">
-										Permanently delete this form, all fields, and submissions.
-										This action cannot be undone.
-									</p>
-								</div>
-								<Button
-									onClick={() => setDeleteDialogOpen(true)}
-									variant="destructive"
-								>
-									<Trash2 className="mr-2 h-4 w-4" />
-									Delete Form
-								</Button>
-							</div>
-						</div>
-					</div>
+					<DangerZoneSection
+						onDeleteAllSubmissions={() => setDeleteSubmissionsDialogOpen(true)}
+						onDeleteForm={() => setDeleteDialogOpen(true)}
+						submissionCount={form.submissionCount}
+					/>
 				</div>
 			</div>
 

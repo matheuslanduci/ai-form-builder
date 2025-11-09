@@ -1,25 +1,39 @@
 import { useOrganization } from '@clerk/tanstack-react-start'
 import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
-import * as React from 'react'
+import { useState } from 'react'
+import { z } from 'zod'
 import { columns } from '~/components/forms/columns'
 import { DataTable } from '~/components/forms/data-table'
 import { Layout } from '~/components/layout/layout'
 import { Button } from '~/components/ui/button'
+import { seo } from '~/lib/seo'
+
+const formsSearchSchema = z.object({
+	cursor: z.string().nullable().catch(null).default(null)
+})
 
 export const Route = createFileRoute('/_platform/forms/')({
-	component: RouteComponent
+	component: RouteComponent,
+	validateSearch: formsSearchSchema,
+	head: () => ({
+		meta: seo({
+			title: 'My Forms - AI Form Builder',
+			description: 'View and manage all your forms'
+		})
+	})
 })
 
 function RouteComponent() {
 	const { organization, isLoaded } = useOrganization()
 	const { auth } = Route.useRouteContext()
-	const [cursor, setCursor] = React.useState<string | null>(null)
-	const [cursorStack, setCursorStack] = React.useState<(string | null)[]>([])
-	const navigate = Route.useNavigate()
+	const search = Route.useSearch()
+	const navigate = useNavigate({ from: Route.fullPath })
+	const [cursorStack, setCursorStack] = useState<(string | null)[]>([])
+
 	const { isLoading, data } = useQuery(
 		convexQuery(
 			api.form.list,
@@ -28,7 +42,7 @@ function RouteComponent() {
 						businessId: organization?.id ?? (auth.userId as string),
 						paginationOpts: {
 							numItems: 20,
-							cursor: cursor
+							cursor: search.cursor
 						}
 					}
 				: 'skip'
@@ -46,17 +60,21 @@ function RouteComponent() {
 
 	function handleNext() {
 		if (!data?.continueCursor || data.isDone) return
-		setCursorStack((s) => [...s, cursor])
-		setCursor(data.continueCursor)
+		setCursorStack((prev) => [...prev, search.cursor])
+		navigate({
+			search: { cursor: data.continueCursor }
+		})
 	}
 
 	function handlePrev() {
-		setCursorStack((s) => {
-			if (s.length === 0) return s
-			const copy = [...s]
-			const previous = copy.pop() as string | null
-			setCursor(previous)
-			return copy
+		setCursorStack((prev) => {
+			if (prev.length === 0) return prev
+			const newStack = [...prev]
+			const previousCursor = newStack.pop() as string | null
+			navigate({
+				search: { cursor: previousCursor }
+			})
+			return newStack
 		})
 	}
 
