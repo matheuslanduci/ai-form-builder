@@ -6,6 +6,7 @@ import type { Id } from 'convex/_generated/dataModel'
 import { Edit, MoreHorizontal, Power, Trash } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { Admin } from '~/components/admin'
 import { DeleteWebhookDialog } from '~/components/webhooks/delete-webhook-dialog'
 import { Button } from '../ui/button'
 import {
@@ -71,18 +72,20 @@ function WebhookMenuItems({
 	return (
 		<>
 			<Label>Actions</Label>
-			<Item onClick={onEditClick}>
-				<Edit className="mr-2 h-4 w-4" />
-				Edit
-			</Item>
-			<Item onClick={onToggleEnabled}>
-				<Power className="mr-2 h-4 w-4" />
-				{webhook.enabled ? 'Disable' : 'Enable'}
-			</Item>
-			<Item className="text-destructive" onClick={onDeleteClick}>
-				<Trash className="mr-2 h-4 w-4 text-destructive" />
-				Delete
-			</Item>
+			<Admin>
+				<Item onClick={onEditClick}>
+					<Edit className="mr-2 h-4 w-4" />
+					Edit
+				</Item>
+				<Item onClick={onToggleEnabled}>
+					<Power className="mr-2 h-4 w-4" />
+					{webhook.enabled ? 'Disable' : 'Enable'}
+				</Item>
+				<Item className="text-destructive" onClick={onDeleteClick}>
+					<Trash className="mr-2 h-4 w-4 text-destructive" />
+					Delete
+				</Item>
+			</Admin>
 		</>
 	)
 }

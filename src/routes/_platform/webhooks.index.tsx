@@ -3,6 +3,7 @@ import { convexQuery } from '@convex-dev/react-query'
 import { queryOptions, useSuspenseQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { api } from 'convex/_generated/api'
+import { Admin } from '~/components/admin'
 import { Layout } from '~/components/layout/layout'
 import { Button } from '~/components/ui/button'
 import { WebhooksTable } from '~/components/webhooks/webhooks-table'
@@ -38,9 +39,11 @@ function RouteComponent() {
 	return (
 		<Layout
 			actions={
-				<Button asChild size="sm">
-					<Link to="/webhooks/new">New Webhook</Link>
-				</Button>
+				<Admin>
+					<Button asChild size="sm">
+						<Link to="/webhooks/new">New Webhook</Link>
+					</Button>
+				</Admin>
 			}
 			title="Webhooks"
 		>

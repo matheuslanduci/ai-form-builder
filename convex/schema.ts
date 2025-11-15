@@ -63,19 +63,10 @@ export default defineSchema({
 	chatMessage: defineTable({
 		formId: v.id('form'),
 		userId: v.string(), // Clerk user ID
+		businessId: v.optional(v.string()), // Organization or User ID (matches form.businessId) - optional for backward compatibility
 		role: v.union(v.literal('user'), v.literal('assistant')),
 		content: v.string(),
-		streamId: v.optional(v.string()), // For persistent text streaming
-		attachments: v.optional(
-			v.array(
-				v.object({
-					fileId: v.id('_storage'),
-					fileName: v.string(),
-					fileType: v.string(),
-					fileSize: v.number()
-				})
-			)
-		)
+		streamId: v.optional(v.string()) // For persistent text streaming
 	}).index('byFormId', ['formId']),
 	formEditHistory: defineTable({
 		formId: v.id('form'),
@@ -175,5 +166,19 @@ export default defineSchema({
 		payload: v.any() // The webhook payload that was sent
 	})
 		.index('byWebhookId', ['webhookId'])
-		.index('byBusinessId', ['businessId'])
+		.index('byBusinessId', ['businessId']),
+	exportToken: defineTable({
+		formId: v.id('form'),
+		businessId: v.string(),
+		token: v.string(),
+		expiresAt: v.number()
+	})
+		.index('byToken', ['token'])
+		.index('byExpiresAt', ['expiresAt']),
+	formTag: defineTable({
+		formId: v.id('form'),
+		tagId: v.id('tag')
+	})
+		.index('byFormId', ['formId'])
+		.index('byTagId', ['tagId'])
 })

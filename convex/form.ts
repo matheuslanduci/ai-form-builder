@@ -1,13 +1,15 @@
 import { paginationOptsValidator } from 'convex/server'
 import { v } from 'convex/values'
 import { internal } from './_generated/api'
+import type { Id } from './_generated/dataModel'
 import { internalQuery, mutation, query } from './_generated/server'
-import { resolveIdentity, resolveMembership } from './auth'
+import { requireAdmin, resolveIdentity, resolveMembership } from './auth'
 import { notFound } from './error'
 
 export const list = query({
 	args: {
 		businessId: v.string(),
+		tags: v.optional(v.array(v.id('tag'))),
 		paginationOpts: paginationOptsValidator
 	},
 	handler: async (ctx, args) => {
@@ -20,10 +22,64 @@ export const list = query({
 			})
 		}
 
-		return await ctx.db
-			.query('form')
-			.withIndex('byBusinessId', (q) => q.eq('businessId', args.businessId))
-			.paginate(args.paginationOpts)
+		// If no tag filters, return all forms for the business
+		if (!args.tags || args.tags.length === 0) {
+			return await ctx.db
+				.query('form')
+				.withIndex('byBusinessId', (q) => q.eq('businessId', args.businessId))
+				.paginate(args.paginationOpts)
+		}
+
+		// Use the join table to find forms with the specified tags
+		// Get all formIds that have ALL the specified tags
+		const formTagsByTag = await Promise.all(
+			args.tags.map((tagId) =>
+				ctx.db
+					.query('formTag')
+					.withIndex('byTagId', (q) => q.eq('tagId', tagId))
+					.collect()
+			)
+		)
+
+		// Find formIds that appear in all tag results (intersection)
+		const formIdCounts = new Map<string, number>()
+		for (const formTags of formTagsByTag) {
+			for (const ft of formTags) {
+				const count = (formIdCounts.get(ft.formId) || 0) + 1
+				formIdCounts.set(ft.formId, count)
+			}
+		}
+
+		// Only keep formIds that have all tags
+		const requiredTagCount = args.tags.length
+		const filteredFormIds = Array.from(formIdCounts.entries())
+			.filter(([_, count]) => count === requiredTagCount)
+			.map(([formId]) => formId)
+
+		// Fetch the forms and filter by businessId
+		const formPromises = filteredFormIds.map((formId) =>
+			ctx.db.get(formId as Id<'form'>)
+		)
+		const forms = await Promise.all(formPromises)
+
+		const businessForms = forms.filter(
+			(form): form is Extract<typeof form, { businessId: string }> =>
+				form !== null &&
+				'businessId' in form &&
+				form.businessId === args.businessId
+		)
+
+		// Sort by creation time descending
+		businessForms.sort((a, b) => b._creationTime - a._creationTime)
+
+		// No pagination when filtering - return all results
+		return {
+			page: businessForms,
+			isDone: true,
+			continueCursor: '',
+			splitCursor: null,
+			pageStatus: null
+		}
 	}
 })
 
@@ -85,6 +141,15 @@ export const getInternal = internalQuery({
 	}
 })
 
+export const getById = internalQuery({
+	args: {
+		formId: v.id('form')
+	},
+	handler: async (ctx, args) => {
+		return await ctx.db.get(args.formId)
+	}
+})
+
 export const create = mutation({
 	args: {
 		businessId: v.string(),
@@ -140,6 +205,8 @@ export const create = mutation({
 			tags: [],
 			lastUpdatedAt: Date.now()
 		})
+
+		// No formTag entries to create since tags array is empty initially
 
 		for (const email of emailAddress) {
 			await ctx.db.insert('formNotification', {
@@ -298,6 +365,25 @@ export const updateTags = mutation({
 			})
 		}
 
+		// Get current formTag entries
+		const currentFormTags = await ctx.db
+			.query('formTag')
+			.withIndex('byFormId', (q) => q.eq('formId', args.formId))
+			.collect()
+
+		// Delete all current formTag entries
+		await Promise.all(currentFormTags.map((ft) => ctx.db.delete(ft._id)))
+
+		// Create new formTag entries
+		await Promise.all(
+			args.tags.map((tagId) =>
+				ctx.db.insert('formTag', {
+					formId: args.formId,
+					tagId
+				})
+			)
+		)
+
 		await ctx.db.patch(args.formId, {
 			tags: args.tags,
 			lastUpdatedAt: Date.now()
@@ -330,6 +416,12 @@ export const remove = mutation({
 		// Verify form belongs to business
 		if (form.businessId !== args.businessId) throw notFound()
 
+		// Require admin for form deletion
+		await requireAdmin(ctx, {
+			businessId: args.businessId,
+			userId: user.subject
+		})
+
 		// Fetch all related data
 		const fields = await ctx.db
 			.query('formField')
@@ -346,11 +438,17 @@ export const remove = mutation({
 			.withIndex('byFormId', (q) => q.eq('formId', args.formId))
 			.collect()
 
+		const formTags = await ctx.db
+			.query('formTag')
+			.withIndex('byFormId', (q) => q.eq('formId', args.formId))
+			.collect()
+
 		// Delete all related data in parallel
 		await Promise.all([
 			...fields.map((field) => ctx.db.delete(field._id)),
 			...history.map((entry) => ctx.db.delete(entry._id)),
-			...chatMessages.map((message) => ctx.db.delete(message._id))
+			...chatMessages.map((message) => ctx.db.delete(message._id)),
+			...formTags.map((ft) => ctx.db.delete(ft._id))
 		])
 
 		// Delete the form itself

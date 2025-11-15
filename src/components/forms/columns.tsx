@@ -24,6 +24,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
+import { Admin } from '~/components/admin'
 import { Button } from '~/components/ui/button'
 import {
 	ColorPicker,
@@ -516,16 +517,18 @@ export function FormMenuItems({
 
 			<Separator />
 
-			<Item
-				className="text-destructive"
-				onClick={(e) => {
-					e.preventDefault()
-					onDeleteClick?.()
-				}}
-			>
-				<Trash className="mr-2 h-4 w-4 text-destructive" />
-				Delete
-			</Item>
+			<Admin>
+				<Item
+					className="text-destructive"
+					onClick={(e) => {
+						e.preventDefault()
+						onDeleteClick?.()
+					}}
+				>
+					<Trash className="mr-2 h-4 w-4 text-destructive" />
+					Delete
+				</Item>
+			</Admin>
 		</>
 	)
 }

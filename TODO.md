@@ -17,8 +17,17 @@
 - [x] Align default design for pages (based on settings page)
 - [x] Analytics
 - [x] AI assistant for form building
+- [x] CSV Export
+- [x] Filtering by tags
+- [x] Allow only admin to certain actions (Delete form, view submissions, etc)
+- [x] Remove attachments from chat
+- [x] Fix SSR for Form Page
+- [x] Fix AI assistant tool calls
 - [ ] Human Refactor when possible
 - [ ] Protect Routes
-- [ ] Allow only admin to certain actions (Delete form, view submissions, etc)
 - [ ] Validation rules
-- [ ] Export Submissions to CSV, XLSX
+- [ ] Rename project to "Landuci Form"
+- [ ] Add Sentry
+- [ ] Deploy to production
+- [ ] Custom domain support
+- [ ] QA Tests in production

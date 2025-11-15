@@ -8,6 +8,7 @@ import { Download, Eye, Loader2, MoreHorizontal, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { z } from 'zod'
+import { Admin } from '~/components/admin'
 import { Button } from '~/components/ui/button'
 import {
 	ContextMenu,
@@ -41,6 +42,7 @@ import {
 	TableHeader,
 	TableRow
 } from '~/components/ui/table'
+import { envClient } from '~/env/env.client'
 import { seo } from '~/lib/seo'
 
 type Submission = {
@@ -82,10 +84,12 @@ function SubmissionMenuItems({
 				<Eye className="mr-2 h-4 w-4" />
 				View
 			</Item>
-			<Item className="text-destructive" onClick={onDeleteClick}>
-				<Trash2 className="mr-2 h-4 w-4 text-destructive" />
-				Delete
-			</Item>
+			<Admin>
+				<Item className="text-destructive" onClick={onDeleteClick}>
+					<Trash2 className="mr-2 h-4 w-4 text-destructive" />
+					Delete
+				</Item>
+			</Admin>
 		</>
 	)
 }
@@ -163,6 +167,43 @@ function RouteComponent() {
 		}
 	})
 
+	const generateExportTokenMutation = useMutation({
+		mutationFn: useConvexMutation(api.export.generateExportToken),
+		onSuccess: (data: { token: string; expiresAt: number }) => {
+			// Get Convex URL from environment
+			const convexUrl = envClient.VITE_CONVEX_SITE
+
+			if (!convexUrl) {
+				toast.error('Configuration error: Convex URL not found')
+				return
+			}
+
+			// Construct the export URL
+			const exportUrl = new URL('/export-csv', convexUrl)
+			exportUrl.searchParams.set('token', data.token)
+
+			// Trigger download
+			window.open(exportUrl.toString(), '_blank')
+			toast.success('CSV export started')
+		},
+		onError: () => {
+			toast.error('Failed to generate export token')
+		}
+	})
+
+	const exportToCSV = () => {
+		if (!formId || !isOrgLoaded) return
+
+		const businessId = organization?.id ?? (user?.id as string)
+
+		toast.info('Preparing CSV export...')
+
+		generateExportTokenMutation.mutate({
+			formId: formId as Id<'form'>,
+			businessId
+		})
+	}
+
 	if (
 		isFormLoading ||
 		isFieldsLoading ||
@@ -237,11 +278,6 @@ function RouteComponent() {
 			)
 		}
 		return String(value)
-	}
-
-	const exportToCSV = () => {
-		// Will be implemented with Cloudflare Workers + Queues
-		toast.info('CSV export will be available soon')
 	}
 
 	const handleDeleteSubmission = (submissionId: Id<'formSubmission'>) => {

@@ -1,74 +1,37 @@
-import type { StreamId } from '@convex-dev/persistent-text-streaming'
-import { useStream } from '@convex-dev/persistent-text-streaming/react'
-import { api } from 'convex/_generated/api'
-import type { Id } from 'convex/_generated/dataModel'
-import { ArrowUp, Paperclip, Sparkles } from 'lucide-react'
+import { ArrowUp, Sparkles } from 'lucide-react'
 import { useRef } from 'react'
 import {
 	InputGroup,
 	InputGroupAddon,
 	InputGroupButton,
-	InputGroupText,
 	InputGroupTextarea
 } from '~/components/ui/input-group'
-import { Separator } from '~/components/ui/separator'
-import { envClient } from '~/env/env.client'
 import { cn } from '~/lib/utils'
 import type { ChatMessage } from './types'
 
-// Component to render message content with streaming support
-function MessageContent({
-	content,
-	streamId,
-	isNewMessage
-}: {
-	content: string
-	streamId?: string
-	isNewMessage: boolean
-}) {
-	// Get the Convex URL from environment
-	const streamUrl = new URL(`${envClient.VITE_CONVEX_SITE}/ai-stream`)
-
-	// Use the stream hook to get real-time updates if streamId exists
-	// driven = true means this client created the stream
-	// driven = false means this is a reload/other client viewing the stream
-	const streamBody = useStream(
-		api.aiFormBuilder.getStreamBody,
-		streamUrl,
-		isNewMessage, // Only drive if this is a new message in this session
-		streamId as StreamId
-	)
-
-	// Use stream content if available and has text, otherwise use stored content
-	const displayContent = streamBody?.text || content
-
-	return <p className="whitespace-pre-wrap wrap-break-word">{displayContent}</p>
+// Component to render message content (streaming removed - now using agent)
+function MessageContent({ content }: { content: string }) {
+	return <p className="whitespace-pre-wrap wrap-break-word">{content}</p>
 }
 
 interface AIAssistantPanelProps {
 	messages: ChatMessage[]
 	chatMessage: string
-	attachments: File[]
-	userName: string
+	isProcessing: boolean
 	userImage: string
-	isProcessing?: boolean
-	newMessageIds?: Set<Id<'chatMessage'>> // IDs of messages created in this session
+	userName: string
 	onChatMessageChange: (message: string) => void
 	onSendMessage: () => void
-	onAttachmentsChange: (files: File[]) => void
 }
 
 export function AIAssistantPanel({
 	messages,
 	chatMessage,
-	attachments,
 	userName,
 	userImage,
 	isProcessing = false,
-	newMessageIds = new Set(),
 	onChatMessageChange,
-	onSendMessage,
-	onAttachmentsChange
+	onSendMessage
 }: AIAssistantPanelProps) {
 	const chatScrollRef = useRef<HTMLDivElement>(null)
 
@@ -137,11 +100,7 @@ export function AIAssistantPanel({
 												: 'bg-blue-500 text-white'
 										)}
 									>
-										<MessageContent
-											content={message.content}
-											isNewMessage={newMessageIds.has(message._id)}
-											streamId={message.streamId}
-										/>
+										<MessageContent content={message.content} />
 									</div>
 
 									{/* Message timestamp */}
@@ -191,34 +150,6 @@ export function AIAssistantPanel({
 						value={chatMessage}
 					/>
 					<InputGroupAddon align="block-end">
-						<input
-							accept="*/*"
-							className="hidden"
-							id="chat-file-upload"
-							multiple
-							onChange={(e) => {
-								if (e.target.files) {
-									onAttachmentsChange(Array.from(e.target.files))
-								}
-							}}
-							type="file"
-						/>
-						<label htmlFor="chat-file-upload">
-							<InputGroupButton
-								className="rounded-full"
-								size="icon-xs"
-								type="button"
-								variant="outline"
-							>
-								<Paperclip className="h-3.5 w-3.5" />
-							</InputGroupButton>
-						</label>
-						{attachments.length > 0 && (
-							<InputGroupText className="text-xs">
-								{attachments.length} file(s)
-							</InputGroupText>
-						)}
-						<Separator className="h-4!" orientation="vertical" />
 						<InputGroupButton
 							className="rounded-full"
 							disabled={!chatMessage.trim() || isProcessing}

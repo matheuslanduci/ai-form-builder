@@ -1,6 +1,6 @@
 import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
-import { resolveIdentity, resolveMembership } from './auth'
+import { requireAdmin, resolveIdentity, resolveMembership } from './auth'
 import { notFound } from './error'
 
 export const list = query({
@@ -58,6 +58,12 @@ export const create = mutation({
 			})
 		}
 
+		// Require admin for notification creation
+		await requireAdmin(ctx, {
+			businessId: args.businessId,
+			userId: user.subject
+		})
+
 		const form = await ctx.db.get(args.formId)
 		if (!form || form.businessId !== args.businessId) throw notFound()
 
@@ -104,6 +110,12 @@ export const update = mutation({
 				userId: user.subject
 			})
 		}
+
+		// Require admin for notification updates
+		await requireAdmin(ctx, {
+			businessId: args.businessId,
+			userId: user.subject
+		})
 
 		const notification = await ctx.db.get(args.notificationId)
 		if (!notification || notification.businessId !== args.businessId)
@@ -187,6 +199,12 @@ export const remove = mutation({
 				userId: user.subject
 			})
 		}
+
+		// Require admin for notification deletion
+		await requireAdmin(ctx, {
+			businessId: args.businessId,
+			userId: user.subject
+		})
 
 		const notification = await ctx.db.get(args.notificationId)
 		if (!notification || notification.businessId !== args.businessId)

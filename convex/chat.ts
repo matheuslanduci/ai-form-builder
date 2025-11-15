@@ -19,19 +19,10 @@ export const list = query({
 			_creationTime: v.number(),
 			formId: v.id('form'),
 			userId: v.string(),
+			businessId: v.optional(v.string()),
 			role: v.union(v.literal('user'), v.literal('assistant')),
 			content: v.string(),
-			streamId: v.optional(v.string()),
-			attachments: v.optional(
-				v.array(
-					v.object({
-						fileId: v.id('_storage'),
-						fileName: v.string(),
-						fileType: v.string(),
-						fileSize: v.number()
-					})
-				)
-			)
+			streamId: v.optional(v.string())
 		})
 	),
 	handler: async (ctx, args) => {
@@ -64,17 +55,7 @@ export const create = mutation({
 	args: {
 		formId: v.id('form'),
 		businessId: v.string(),
-		content: v.string(),
-		attachments: v.optional(
-			v.array(
-				v.object({
-					fileId: v.id('_storage'),
-					fileName: v.string(),
-					fileType: v.string(),
-					fileSize: v.number()
-				})
-			)
-		)
+		content: v.string()
 	},
 	returns: v.id('chatMessage'),
 	handler: async (ctx, args) => {
@@ -97,9 +78,9 @@ export const create = mutation({
 		const messageId = await ctx.db.insert('chatMessage', {
 			formId: args.formId,
 			userId: user.subject,
+			businessId: args.businessId,
 			role: 'user',
-			content: args.content,
-			attachments: args.attachments
+			content: args.content
 		})
 
 		console.log('[Chat] User message created', {
@@ -184,6 +165,7 @@ export const createInternal = internalMutation({
 	args: {
 		formId: v.id('form'),
 		userId: v.string(),
+		businessId: v.string(),
 		role: v.union(v.literal('user'), v.literal('assistant')),
 		content: v.string()
 	},
@@ -191,6 +173,7 @@ export const createInternal = internalMutation({
 		return await ctx.db.insert('chatMessage', {
 			formId: args.formId,
 			userId: args.userId,
+			businessId: args.businessId,
 			role: args.role,
 			content: args.content
 		})

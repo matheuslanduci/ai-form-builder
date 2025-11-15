@@ -1,46 +1,39 @@
-import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import {
 	queryOptions,
 	useMutation,
 	useSuspenseQuery
 } from '@tanstack/react-query'
 import { createFileRoute, notFound } from '@tanstack/react-router'
-import { api } from 'convex/_generated/api'
 import type { Id } from 'convex/_generated/dataModel'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { seo } from '~/lib/seo'
+import {
+	getPublicFormData,
+	submitPublicForm
+} from '~/server/public-form.server'
 import { FormRenderer } from '../components/forms/form-renderer'
 import { FormSuccess } from '../components/forms/form-success'
 
 const formQueryOptions = (formId: Id<'form'>) =>
-	queryOptions(
-		convexQuery(api.publicForm.getPublicForm, {
-			formId
-		})
-	)
-
-const fieldsQueryOptions = (formId: Id<'form'>) =>
-	queryOptions(
-		convexQuery(api.publicForm.getPublicFormFields, {
-			formId
-		})
-	)
+	queryOptions({
+		queryKey: ['public-form', formId],
+		queryFn: () => getPublicFormData({ data: { formId } })
+	})
 
 export const Route = createFileRoute('/f/$id')({
 	loader: async ({ context, params }) => {
 		const formId = params.id as Id<'form'>
 
-		const [form] = await Promise.all([
-			context.queryClient.ensureQueryData(formQueryOptions(formId)),
-			context.queryClient.ensureQueryData(fieldsQueryOptions(formId))
-		])
+		const { form, fields } = await context.queryClient.ensureQueryData(
+			formQueryOptions(formId)
+		)
 
 		if (!form) {
 			throw notFound()
 		}
 
-		return { form }
+		return { form, fields }
 	},
 	component: RouteComponent,
 	head: ({ loaderData }) => ({
@@ -57,23 +50,21 @@ function RouteComponent() {
 	const { id } = Route.useParams()
 	const formId = id as Id<'form'>
 
-	const { data: form, isLoading: isFormLoading } = useSuspenseQuery(
+	const { data: formData, isLoading: isFormLoading } = useSuspenseQuery(
 		formQueryOptions(formId)
 	)
-	const { data: fields = [], isLoading: isFieldsLoading } = useSuspenseQuery(
-		fieldsQueryOptions(formId)
-	)
 
-	const [formData, setFormData] = useState<Record<string, string | string[]>>(
-		{}
-	)
+	const [submissionData, setSubmissionData] = useState<
+		Record<string, string | string[]>
+	>({})
 	const [errors, setErrors] = useState<Record<string, string>>({})
 	const [isSubmitted, setIsSubmitted] = useState(false)
 
-	const submitFormFn = useConvexMutation(api.publicForm.submitForm)
-
 	const submitMutation = useMutation({
-		mutationFn: submitFormFn,
+		mutationFn: (data: {
+			formId: string
+			formData: Record<string, string | string[]>
+		}) => submitPublicForm({ data }),
 		onSuccess: () => {
 			setIsSubmitted(true)
 		},
@@ -84,7 +75,7 @@ function RouteComponent() {
 	})
 
 	const handleFieldChange = (fieldId: string, value: string | string[]) => {
-		setFormData((prev) => ({
+		setSubmissionData((prev) => ({
 			...prev,
 			[fieldId]: value
 		}))
@@ -99,7 +90,7 @@ function RouteComponent() {
 	}
 
 	const handleClear = () => {
-		setFormData({})
+		setSubmissionData({})
 		setErrors({})
 	}
 
@@ -108,8 +99,8 @@ function RouteComponent() {
 
 		// Validate required fields
 		const newErrors: Record<string, string> = {}
-		fields.forEach((field) => {
-			const fieldValue = formData[field._id]
+		formData.fields.forEach((field) => {
+			const fieldValue = submissionData[field._id]
 			if (field.required) {
 				// Check if field is empty (string) or has no selections (array)
 				if (
@@ -130,11 +121,11 @@ function RouteComponent() {
 		// Submit the form
 		submitMutation.mutate({
 			formId,
-			data: formData
+			formData: submissionData
 		})
 	}
 
-	if (isFormLoading || isFieldsLoading) {
+	if (isFormLoading) {
 		return (
 			<div className="min-h-screen bg-background flex items-center justify-center">
 				<div className="text-center">
@@ -145,7 +136,7 @@ function RouteComponent() {
 		)
 	}
 
-	if (!form) {
+	if (!formData.form) {
 		return (
 			<div className="min-h-screen bg-background flex items-center justify-center">
 				<div className="text-center">
@@ -162,8 +153,8 @@ function RouteComponent() {
 	if (isSubmitted) {
 		return (
 			<FormSuccess
-				formTitle={form.title}
-				successMessage={form.successMessage}
+				formTitle={formData.form.title}
+				successMessage={formData.form.successMessage}
 			/>
 		)
 	}
@@ -172,9 +163,9 @@ function RouteComponent() {
 		<div className="min-h-screen bg-gray-50">
 			<FormRenderer
 				errors={errors}
-				fields={fields}
-				form={form}
-				formData={formData}
+				fields={formData.fields}
+				form={formData.form}
+				formData={submissionData}
 				isSubmitting={submitMutation.isPending}
 				onClear={handleClear}
 				onFieldChange={handleFieldChange}

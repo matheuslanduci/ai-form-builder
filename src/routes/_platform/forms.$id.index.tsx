@@ -1,5 +1,9 @@
 import { useOrganization, useUser } from '@clerk/tanstack-react-start'
-import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
+import {
+	convexQuery,
+	useConvexAction,
+	useConvexMutation
+} from '@convex-dev/react-query'
 import {
 	DndContext,
 	type DragEndEvent,
@@ -52,11 +56,7 @@ function RouteComponent() {
 	const [selectedTool, setSelectedTool] = useState<'ai' | 'fields' | null>(null)
 	const [activeId, setActiveId] = useState<string | null>(null)
 	const [chatMessage, setChatMessage] = useState('')
-	const [attachments, setAttachments] = useState<File[]>([])
 	const [isAiProcessing, setIsAiProcessing] = useState(false)
-	const [newMessageIds, setNewMessageIds] = useState<Set<Id<'chatMessage'>>>(
-		new Set()
-	)
 	const chatScrollRef = useRef<HTMLDivElement>(null)
 	const queryClient = useQueryClient()
 
@@ -90,12 +90,11 @@ function RouteComponent() {
 			pageId: undefined
 		})
 	)
-	const { data: chatMessages = [] } = useQuery(
-		convexQuery(api.chat.list, {
-			formId,
-			businessId
-		})
-	)
+	const chatMessagesQueryKey = convexQuery(api.chat.list, {
+		formId,
+		businessId
+	})
+	const { data: chatMessages = [] } = useQuery(chatMessagesQueryKey)
 
 	// Enhance chat messages with streaming content
 	const messagesWithStreams = useMemo(() => {
@@ -115,9 +114,7 @@ function RouteComponent() {
 	const updateFieldFn = useConvexMutation(api.formField.update)
 	const deleteFieldFn = useConvexMutation(api.formField.remove)
 	const reorderFieldsFn = useConvexMutation(api.formField.reorder)
-	const createChatWithStreamFn = useConvexMutation(
-		api.aiFormBuilder.createChatWithStream
-	)
+	const chatWithAgentFn = useConvexAction(api.aiFormBuilderAgent.chatWithAgent)
 
 	// Mutations
 	const updateFormMutation = useMutation({
@@ -399,24 +396,74 @@ function RouteComponent() {
 	const sendMessage = async () => {
 		if (!chatMessage.trim()) return
 
-		try {
-			setIsAiProcessing(true)
+		const messageToSend = chatMessage
+		console.log('[SendMessage] Starting send', {
+			messageToSend,
+			formId,
+			businessId
+		})
 
-			// Create chat with stream
-			const result = await createChatWithStreamFn({
+		setChatMessage('') // Clear input immediately for better UX
+		setIsAiProcessing(true)
+
+		try {
+			// Optimistic update: Add user message immediately
+			const tempUserMessageId = `temp-user-${Date.now()}`
+			console.log('[SendMessage] Adding optimistic user message', {
+				tempUserMessageId
+			})
+			console.log('[SendMessage] Query key:', chatMessagesQueryKey)
+
+			queryClient.setQueryData(
+				chatMessagesQueryKey.queryKey,
+				(old: typeof chatMessages) => {
+					console.log('[SendMessage] Current chat messages:', old?.length || 0)
+					const newMessages = [
+						...(old || []),
+						{
+							_id: tempUserMessageId as Id<'chatMessage'>,
+							_creationTime: Date.now(),
+							formId,
+							businessId,
+							userId: user?.id,
+							role: 'user' as const,
+							content: messageToSend
+						}
+					]
+					console.log(
+						'[SendMessage] Updated to:',
+						newMessages.length,
+						'messages'
+					)
+					return newMessages
+				}
+			)
+
+			// Scroll to bottom immediately
+			setTimeout(() => {
+				chatScrollRef.current?.scrollTo({
+					top: chatScrollRef.current.scrollHeight,
+					behavior: 'smooth'
+				})
+			}, 50)
+
+			console.log('[SendMessage] Calling agent action...')
+			// Send message to agent (no streaming, just wait for response)
+			const result = await chatWithAgentFn({
 				formId,
 				businessId,
-				content: chatMessage
+				content: messageToSend
 			})
 
-			console.log('[Form Builder] Chat created with stream', result)
+			console.log('[SendMessage] Agent completed', result)
 
-			// Track this assistant message as new (for streaming)
-			// The useStream hook in MessageContent will automatically trigger the HTTP endpoint
-			setNewMessageIds((prev) => new Set(prev).add(result.assistantMessageId))
+			// Force refresh chat messages to get the actual messages from server
+			console.log('[SendMessage] Invalidating query to force refresh...')
+			await queryClient.invalidateQueries({
+				queryKey: chatMessagesQueryKey.queryKey
+			})
 
-			setChatMessage('')
-			setAttachments([])
+			console.log('[SendMessage] Query invalidated, should refetch now')
 
 			// Scroll to bottom after a short delay
 			setTimeout(() => {
@@ -426,8 +473,9 @@ function RouteComponent() {
 				})
 			}, 100)
 		} catch (error) {
-			console.error('[Form Builder] Failed to send message', error)
+			console.error('[Form Builder Agent] Failed to send message', error)
 			toast.error('Failed to send message')
+		} finally {
 			setIsAiProcessing(false)
 		}
 	}
@@ -522,12 +570,9 @@ function RouteComponent() {
 						<div className="w-80 bg-white border-l border-gray-200 flex flex-col h-full">
 							{selectedTool === 'ai' && (
 								<AIAssistantPanel
-									attachments={attachments}
 									chatMessage={chatMessage}
 									isProcessing={isAiProcessing}
 									messages={messagesWithStreams as ChatMessage[]}
-									newMessageIds={newMessageIds}
-									onAttachmentsChange={setAttachments}
 									onChatMessageChange={setChatMessage}
 									onSendMessage={sendMessage}
 									userImage={user?.imageUrl || ''}

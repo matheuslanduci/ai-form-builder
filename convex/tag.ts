@@ -1,6 +1,6 @@
 import { v } from 'convex/values'
 import { mutation, query } from './_generated/server'
-import { resolveIdentity, resolveMembership } from './auth'
+import { requireAdmin, resolveIdentity, resolveMembership } from './auth'
 import { notFound } from './error'
 
 export const list = query({
@@ -107,6 +107,12 @@ export const remove = mutation({
 				userId: user.subject
 			})
 		}
+
+		// Require admin for tag deletion
+		await requireAdmin(ctx, {
+			businessId: tag.businessId,
+			userId: user.subject
+		})
 
 		const forms = await ctx.db
 			.query('form')

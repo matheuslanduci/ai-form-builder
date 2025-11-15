@@ -26,12 +26,7 @@ export type ChatMessage = {
 	_creationTime: number
 	formId: Id<'form'>
 	userId: string
+	businessId?: string
 	role: 'user' | 'assistant'
 	content: string
-	attachments?: {
-		fileId: Id<'_storage'>
-		fileName: string
-		fileType: string
-		fileSize: number
-	}[]
 }

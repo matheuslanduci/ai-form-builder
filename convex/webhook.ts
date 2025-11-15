@@ -8,7 +8,7 @@ import {
 	mutation,
 	query
 } from './_generated/server'
-import { resolveIdentity, resolveMembership } from './auth'
+import { requireAdmin, resolveIdentity, resolveMembership } from './auth'
 import { notFound } from './error'
 
 export const list = query({
@@ -114,6 +114,12 @@ export const create = mutation({
 			})
 		}
 
+		// Require admin for webhook creation
+		await requireAdmin(ctx, {
+			businessId: args.businessId,
+			userId: user.subject
+		})
+
 		// If formId is provided, verify it belongs to this business
 		if (args.formId) {
 			const form = await ctx.db.get(args.formId)
@@ -153,6 +159,12 @@ export const update = mutation({
 				userId: user.subject
 			})
 		}
+
+		// Require admin for webhook updates
+		await requireAdmin(ctx, {
+			businessId: args.businessId,
+			userId: user.subject
+		})
 
 		const webhook = await ctx.db.get(args.webhookId)
 		if (!webhook) throw notFound()
@@ -198,6 +210,12 @@ export const remove = mutation({
 				userId: user.subject
 			})
 		}
+
+		// Require admin for webhook deletion
+		await requireAdmin(ctx, {
+			businessId: args.businessId,
+			userId: user.subject
+		})
 
 		const webhook = await ctx.db.get(args.webhookId)
 		if (!webhook) throw notFound()

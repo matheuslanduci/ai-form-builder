@@ -169,7 +169,7 @@ function RouteComponent() {
 								<QuickActionCard
 									description="Set up webhooks for your forms"
 									icon={<Webhook className="h-6 w-6 text-gray-600" />}
-									label="Manage Webhooks"
+									label="Webhooks"
 									to="/webhooks"
 								/>
 							</div>

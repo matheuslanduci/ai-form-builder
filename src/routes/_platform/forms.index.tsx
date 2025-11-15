@@ -10,10 +10,27 @@ import { columns } from '~/components/forms/columns'
 import { DataTable } from '~/components/forms/data-table'
 import { Layout } from '~/components/layout/layout'
 import { Button } from '~/components/ui/button'
+import {
+	type Filter,
+	type FilterFieldConfig,
+	Filters
+} from '~/components/ui/filters'
 import { seo } from '~/lib/seo'
 
 const formsSearchSchema = z.object({
-	cursor: z.string().nullable().catch(null).default(null)
+	cursor: z.string().nullable().catch(null).default(null),
+	tags: z
+		.union([z.string(), z.array(z.string())])
+		.optional()
+		.catch(undefined)
+		.transform((val) => {
+			if (!val) return []
+			if (typeof val === 'string') {
+				return val ? val.split(',').filter(Boolean) : []
+			}
+			// Handle array case (shouldn't happen but be defensive)
+			return Array.isArray(val) ? val : []
+		})
 })
 
 export const Route = createFileRoute('/_platform/forms/')({
@@ -34,14 +51,46 @@ function RouteComponent() {
 	const navigate = useNavigate({ from: Route.fullPath })
 	const [cursorStack, setCursorStack] = useState<(string | null)[]>([])
 
+	// Load tags for the filter
+	const { data: tags } = useQuery(
+		convexQuery(
+			api.tag.list,
+			isLoaded
+				? {
+						businessId: organization?.id ?? (auth.userId as string)
+					}
+				: 'skip'
+		)
+	)
+
+	// Initialize filters from URL search params
+	const initialFilters: Filter<string>[] =
+		search.tags.length > 0
+			? [
+					{
+						id: '1',
+						field: 'tags',
+						operator: 'includesAllOf',
+						values: search.tags
+					}
+				]
+			: []
+
+	const [filters, setFilters] = useState<Filter<string>[]>(initialFilters)
+
+	// Convert search params to filter IDs
+	const selectedTagIds = search.tags.map((t) => t as Id<'tag'>)
+	const hasActiveFilters = selectedTagIds.length > 0
+
 	const { isLoading, data } = useQuery(
 		convexQuery(
 			api.form.list,
 			isLoaded
 				? {
 						businessId: organization?.id ?? (auth.userId as string),
+						tags: selectedTagIds.length > 0 ? selectedTagIds : undefined,
 						paginationOpts: {
-							numItems: 20,
+							numItems: 10,
 							cursor: search.cursor
 						}
 					}
@@ -57,6 +106,46 @@ function RouteComponent() {
 			})
 		}
 	})
+
+	const filterFields: FilterFieldConfig<string>[] = [
+		{
+			key: 'tags',
+			label: 'Tags',
+			type: 'multiselect',
+			operators: [
+				{
+					value: 'includesAllOf',
+					label: 'includes all of',
+					supportsMultiple: true
+				}
+			],
+			defaultOperator: 'includesAllOf',
+			options: (tags || []).map((tag) => ({
+				value: tag._id,
+				label: tag.name
+			}))
+		}
+	]
+
+	// Handle filter changes
+	const handleFilterChange = (newFilters: Filter<string>[]) => {
+		setFilters(newFilters)
+
+		// Extract tag filters
+		const tagFilter = newFilters.find((f) => f.field === 'tags')
+		const tagIds = tagFilter?.values || []
+
+		// Update URL
+		navigate({
+			search: {
+				cursor: null,
+				tags: tagIds.length > 0 ? tagIds.join(',') : undefined
+			}
+		})
+
+		// Reset cursor stack when filters change
+		setCursorStack([])
+	}
 
 	function handleNext() {
 		if (!data?.continueCursor || data.isDone) return
@@ -95,15 +184,24 @@ function RouteComponent() {
 			}
 			title="Forms"
 		>
-			<DataTable
-				columns={columns}
-				data={data?.page ?? []}
-				hasNext={!data?.isDone}
-				hasPrev={cursorStack.length > 0}
-				isLoading={isLoading}
-				onNext={handleNext}
-				onPrev={handlePrev}
-			/>
+			<div className="space-y-4">
+				<Filters
+					addButtonText="Add filter"
+					fields={filterFields}
+					filters={filters}
+					onChange={handleFilterChange}
+					showAddButton={true}
+				/>
+				<DataTable
+					columns={columns}
+					data={data?.page ?? []}
+					hasNext={!hasActiveFilters && !data?.isDone}
+					hasPrev={!hasActiveFilters && cursorStack.length > 0}
+					isLoading={isLoading}
+					onNext={handleNext}
+					onPrev={handlePrev}
+				/>
+			</div>
 		</Layout>
 	)
 }

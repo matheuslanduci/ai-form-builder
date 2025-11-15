@@ -29,3 +29,23 @@ export async function resolveMembership(
 		clerkOrg
 	}
 }
+
+export async function requireAdmin(
+	ctx: QueryCtx,
+	args: { businessId: string; userId: string }
+) {
+	// Personal accounts: user owns the business, so they're always admin
+	if (args.businessId === args.userId) {
+		return
+	}
+
+	// Organization accounts: check if user has org:admin role
+	const { membership } = await resolveMembership(ctx, {
+		organizationId: args.businessId,
+		userId: args.userId
+	})
+
+	if (membership.role !== 'org:admin') {
+		throw forbidden()
+	}
+}
