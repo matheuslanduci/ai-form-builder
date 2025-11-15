@@ -46,7 +46,7 @@ Examples:
 - "Add a question 'Are you going?'" → Call createField once (type: checkbox, options: ["Yes", "No"])
 - "Add Name, Email, Phone" → Call createField three times (all singleline)
 - "Add a comments field" → Call createField once (type: multiline)
-- "Create a form with Name, Email, Phone" → Update title/description + Call createField three times`,,
+- "Create a form with Name, Email, Phone" → Update title/description + Call createField three times`,
 	tools: {
 		updateFormMetadata: updateFormMetadataTool,
 		createField: createFieldTool,
