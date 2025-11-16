@@ -4,9 +4,7 @@
 	"scripts": {
 		"dev": "NODE_OPTIONS='--import ./instrument.server.mjs' vite dev",
 		"build": "vite build && cp instrument.server.mjs dist/server",
-		"preview": "vite preview",
-		"deploy": "npm run build && wrangler deploy",
-		"cf-typegen": "wrangler types",
+		"start": "NODE_OPTIONS='--import ./instrument.server.mjs' node dist/server/index.mjs",
 		"email": "email dev --port 3001 -d ./emails"
 	},
 	"dependencies": {
