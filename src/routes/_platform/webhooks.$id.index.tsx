@@ -22,7 +22,7 @@ export const Route = createFileRoute('/_platform/webhooks/$id/')({
 	validateSearch: webhookSearchSchema,
 	head: () => ({
 		meta: seo({
-			title: 'Webhook Details - AI Form Builder',
+			title: 'Webhook Details - Landuci Form',
 			description: 'View and manage webhook configuration'
 		})
 	})

@@ -1,4 +1,5 @@
 import { ConvexQueryClient } from '@convex-dev/react-query'
+import * as Sentry from '@sentry/tanstackstart-react'
 import {
 	MutationCache,
 	notifyManager,
@@ -47,6 +48,13 @@ export function getRouter() {
 		router,
 		queryClient
 	})
+
+	if (!router.isServer && envClient.VITE_SENTRY_DSN) {
+		Sentry.init({
+			dsn: envClient.VITE_SENTRY_DSN,
+			sendDefaultPii: true
+		})
+	}
 
 	return router
 }

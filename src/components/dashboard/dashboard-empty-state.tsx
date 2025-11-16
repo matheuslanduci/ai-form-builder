@@ -38,7 +38,7 @@ export function DashboardEmptyState() {
 			</div>
 			<h3 className="mt-4 text-lg font-semibold text-gray-900">No forms yet</h3>
 			<p className="mt-2 text-sm text-gray-600 max-w-md mx-auto">
-				Get started by creating your first form. Use our AI-powered form builder
+				Get started by creating your first form. Use our AI-powered form editor
 				to create beautiful forms in minutes.
 			</p>
 			<Button

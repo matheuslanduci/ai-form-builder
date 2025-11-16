@@ -10,7 +10,7 @@ export function AppSidebarHeader() {
 			<div className="w-full flex flex-col gap-4 overflow-hidden">
 				<div className="w-full flex items-center justify-center">
 					<Link from="/" to="/">
-						<span className="font-bold text-lg">AI Form Builder</span>
+						<span className="font-bold text-lg">Landuci Form</span>
 					</Link>
 				</div>
 				<OrganizationSwitcher

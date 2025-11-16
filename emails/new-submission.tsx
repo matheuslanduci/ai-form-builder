@@ -47,18 +47,15 @@ export function NewSubmissionEmail({
 					<Container className="mx-auto my-10 max-w-[465px] rounded border border-[#eaeaea] border-solid p-5">
 						<Section className="mt-8">
 							<Heading className="text-center text-2xl font-bold text-black">
-								AI Form Builder
+								Landuci Form
 							</Heading>
-						</Section>
-
+						</Section>{' '}
 						<Heading className="mx-0 my-[30px] p-0 text-center font-normal text-xl text-black">
 							New submission received for <strong>{formTitle}</strong>!
 						</Heading>
-
 						<Text className="text-sm text-black leading-6">
 							You've received a new submission for your form.
 						</Text>
-
 						{submissionId && (
 							<Section className="my-6 rounded-lg bg-gray-50 p-4 border border-gray-200">
 								<Text className="m-0 text-xs text-gray-600 uppercase font-semibold mb-2">
@@ -73,7 +70,6 @@ export function NewSubmissionEmail({
 								</Text>
 							</Section>
 						)}
-
 						{fields.length > 0 && (
 							<>
 								<Hr className="mx-0 my-5 w-full border border-[#eaeaea] border-solid" />
@@ -116,7 +112,6 @@ export function NewSubmissionEmail({
 								</Section>
 							</>
 						)}
-
 						{viewUrl && (
 							<>
 								<Hr className="mx-0 my-6 w-full border border-[#eaeaea] border-solid" />
@@ -131,9 +126,7 @@ export function NewSubmissionEmail({
 								</Section>
 							</>
 						)}
-
 						<Hr className="mx-0 my-6 w-full border border-[#eaeaea] border-solid" />
-
 						<Text className="text-gray-500 text-xs leading-6">
 							This email was sent because you have notifications enabled for
 							this form. You can manage your notification settings in the form

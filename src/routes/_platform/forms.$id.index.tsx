@@ -40,7 +40,7 @@ export const Route = createFileRoute('/_platform/forms/$id/')({
 	component: RouteComponent,
 	head: () => ({
 		meta: seo({
-			title: 'Form Builder - AI Form Builder',
+			title: 'Landuci Form - Editor',
 			description: 'Build and edit your form with AI assistance'
 		})
 	})

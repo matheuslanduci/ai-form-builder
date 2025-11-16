@@ -6,8 +6,8 @@ export const Route = createFileRoute('/_auth/sign-in/$')({
 	component: RouteComponent,
 	head: () => ({
 		meta: seo({
-			title: 'Sign In - AI Form Builder',
-			description: 'Sign in to your AI Form Builder account'
+			title: 'Sign In - Landuci Form',
+			description: 'Sign in to your Landuci Form account'
 		})
 	})
 })

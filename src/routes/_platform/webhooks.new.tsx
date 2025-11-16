@@ -14,7 +14,7 @@ export const Route = createFileRoute('/_platform/webhooks/new')({
 	component: RouteComponent,
 	head: () => ({
 		meta: seo({
-			title: 'Create Webhook - AI Form Builder',
+			title: 'Create Webhook - Landuci Form',
 			description: 'Create a new webhook'
 		})
 	})

@@ -103,7 +103,7 @@ export const Route = createFileRoute('/_platform/forms/$id/submissions')({
 	validateSearch: submissionsSearchSchema,
 	head: () => ({
 		meta: seo({
-			title: 'Form Submissions - AI Form Builder',
+			title: 'Form Submissions - Landuci Form',
 			description: 'View and manage form submissions'
 		})
 	})

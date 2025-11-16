@@ -23,11 +23,10 @@
 - [x] Remove attachments from chat
 - [x] Fix SSR for Form Page
 - [x] Fix AI assistant tool calls
-- [ ] Human Refactor when possible
-- [ ] Protect Routes
-- [ ] Validation rules
-- [ ] Rename project to "Landuci Form"
-- [ ] Add Sentry
+- [x] Human Refactor when possible
+- [x] Protect Routes
+- [x] Rename project to "Landuci Form"
+- [x] Add Sentry
 - [ ] Deploy to production
 - [ ] Custom domain support
 - [ ] QA Tests in production

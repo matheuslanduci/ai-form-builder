@@ -38,7 +38,7 @@ export const Route = createFileRoute('/_platform/forms/')({
 	validateSearch: formsSearchSchema,
 	head: () => ({
 		meta: seo({
-			title: 'My Forms - AI Form Builder',
+			title: 'My Forms - Landuci Form',
 			description: 'View and manage all your forms'
 		})
 	})

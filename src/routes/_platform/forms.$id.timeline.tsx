@@ -21,7 +21,7 @@ export const Route = createFileRoute('/_platform/forms/$id/timeline')({
 	validateSearch: timelineSearchSchema,
 	head: () => ({
 		meta: seo({
-			title: 'Form Timeline - AI Form Builder',
+			title: 'Form Timeline - Landuci Form',
 			description: 'View the edit history of your form'
 		})
 	})

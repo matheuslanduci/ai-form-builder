@@ -50,7 +50,7 @@ export const Route = createFileRoute('/_platform/forms/$id')({
 	head: ({ loaderData }) => ({
 		meta: loaderData
 			? seo({
-					title: `${loaderData.form.title} - AI Form Builder`,
+					title: `${loaderData.form.title} - Landuci Form`,
 					description: loaderData.form.description || 'Manage your form'
 				})
 			: undefined

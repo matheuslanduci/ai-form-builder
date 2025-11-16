@@ -14,7 +14,7 @@ export const Route = createFileRoute('/_platform/tags/')({
 	component: RouteComponent,
 	head: () => ({
 		meta: seo({
-			title: 'Tags - AI Form Builder',
+			title: 'Tags - Landuci Form',
 			description: 'Manage your form tags and categories'
 		})
 	})

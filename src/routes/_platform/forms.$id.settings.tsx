@@ -32,7 +32,7 @@ export const Route = createFileRoute('/_platform/forms/$id/settings')({
 	component: RouteComponent,
 	head: () => ({
 		meta: seo({
-			title: 'Form Settings - AI Form Builder',
+			title: 'Form Settings - Landuci Form',
 			description: 'Configure your form settings and preferences'
 		})
 	})
