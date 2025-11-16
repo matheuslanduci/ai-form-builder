@@ -7,6 +7,14 @@
 		"VITE_CONVEX_URL": "https://dynamic-gopher-104.convex.cloud",
 		"VITE_CLERK_PUBLISHABLE_KEY": "pk_live_Y2xlcmsuZm9ybS5sYW5kdWNpLmNvbSQ"
 	},
+	"observability": {
+		"logs": {
+			"enabled": false,
+			"head_sampling_rate": 1,
+			"invocation_logs": true,
+			"persist": true
+		}
+	},
 	"compatibility_date": "2025-09-02",
 	"compatibility_flags": ["nodejs_compat"],
 	"main": "@tanstack/react-start/server-entry"
