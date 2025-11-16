@@ -23,7 +23,7 @@ Most of the features were implemented by AI (thanks Sonnet and Copilot).
 
 - [Convex](https://convex.dev/) - Backend as a Service
 - [Tanstack Start](https://tanstack.com/start/latest) - Fullstack React Framework
-- [Cloudflare Workers](https://workers.cloudflare.com/) - Serverless deployment
+- [Railway](https://railway.app/) - Deployment platform
 - [Sentry](https://sentry.io/) - Error tracking
 
 ### General
