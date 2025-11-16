@@ -3,7 +3,7 @@ import { convexQuery, useConvexMutation } from '@convex-dev/react-query'
 import {
 	queryOptions,
 	useMutation,
-	useSuspenseQuery
+	useQuery
 } from '@tanstack/react-query'
 import {
 	createFileRoute,
@@ -80,6 +80,7 @@ export const Route = createFileRoute('/forms/$id/preview')({
 
 function RouteComponent() {
 	const { id: formId } = Route.useParams()
+	const { form: loaderForm } = Route.useLoaderData()
 	const navigate = useNavigate()
 	const { user } = useUser()
 	const { organization } = useOrganization()
@@ -88,7 +89,8 @@ function RouteComponent() {
 	)
 	const [shareDialogOpen, setShareDialogOpen] = useState(false)
 
-	const businessId = organization?.id ?? (user?.id as string)
+	// Use the same businessId logic as the loader to ensure consistency
+	const businessId = organization?.id ?? user?.id ?? ''
 
 	const updateStatusMutation = useMutation({
 		mutationFn: useConvexMutation(api.form.updateStatus),
@@ -100,13 +102,15 @@ function RouteComponent() {
 		}
 	})
 
-	const { data: form } = useSuspenseQuery(
-		formQueryOptions(formId as Id<'form'>, businessId)
-	)
+	const { data: form = loaderForm } = useQuery({
+		...formQueryOptions(formId as Id<'form'>, businessId),
+		enabled: !!businessId
+	})
 
-	const { data: fields } = useSuspenseQuery(
-		fieldsQueryOptions(formId as Id<'form'>, businessId)
-	)
+	const { data: fields = [] } = useQuery({
+		...fieldsQueryOptions(formId as Id<'form'>, businessId),
+		enabled: !!businessId
+	})
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault()
