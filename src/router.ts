@@ -42,7 +42,15 @@ export function getRouter() {
 			convex: convexQueryClient.convexClient,
 			convexQueryClient
 		},
-		scrollRestoration: true
+		scrollRestoration: true,
+		defaultOnCatch(error, errorInfo) {
+			console.error('Router caught an error:', error, errorInfo)
+			Sentry.captureException(error, {
+				extra: {
+					...errorInfo
+				}
+			})
+		}
 	})
 	setupRouterSsrQueryIntegration({
 		router,
