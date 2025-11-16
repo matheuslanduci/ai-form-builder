@@ -35,7 +35,8 @@ const fieldsQueryOptions = (formId: Id<'form'>, businessId: string) =>
 	queryOptions(
 		convexQuery(api.formField.list, {
 			formId,
-			businessId
+			businessId,
+			pageId: undefined
 		})
 	)
 
