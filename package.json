@@ -8,7 +8,7 @@
 		"email": "email dev --port 3001 -d ./emails"
 	},
 	"dependencies": {
-		"@clerk/tanstack-react-start": "^0.26.5",
+		"@clerk/tanstack-react-start": "0.26.5",
 		"@convex-dev/agent": "^0.3.0",
 		"@convex-dev/persistent-text-streaming": "^0.2.4",
 		"@convex-dev/react-query": "^0.0.0-alpha.11",
