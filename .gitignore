@@ -1,4 +1,4 @@
-
+.env.prod
 .env.local
 
 node_modules
@@ -6,3 +6,6 @@ node_modules
 .tanstack
 
 .vscode
+
+dist
+.wrangler
