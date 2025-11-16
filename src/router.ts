@@ -12,6 +12,7 @@ import { envClient } from './env/env.client'
 import { routeTree } from './routeTree.gen'
 
 export function getRouter() {
+	console.log('Initializing router')
 	if (typeof document !== 'undefined') {
 		notifyManager.setScheduler(window.requestAnimationFrame)
 	}
